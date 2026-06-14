@@ -44,8 +44,15 @@ src/
 `/me/profile/` · `/me/next-round/` · `/me/availability/` · `/me/rankings/` ·
 `/me/history/`. Auth: `Authorization: Token <token>`.
 
+## Push notifications (Firebase / FCM)
+Implementadas con `expo-notifications` + `expo-device`. Al iniciar sesión la app
+obtiene el token NATIVO del dispositivo (`getDevicePushTokenAsync`) y lo registra en
+`POST /api/v2/me/devices/` (`provider: "fcm"`). El backend manda el push al publicar
+una jornada (Firebase Admin). Para un build real:
+- Crear proyecto en Firebase y bajar `google-services.json` (Android) / config iOS.
+- En EAS, añadir `android.googleServicesFile` en `app.json` y subir el service account
+  al backend (`FIREBASE_CREDENTIALS` en Secrets Manager) con `PUSH_ENABLED=True`.
+
 ## Build (EAS) — pendiente de configurar
-`eas build` para iOS/Android. Las push notifications (jornada publicada) se integran
-con `expo-notifications` en una iteración posterior; el backend ya emite el evento
-`round_published` por signal.
+`eas build` para iOS/Android (íconos/splash con el isotipo).
 ```

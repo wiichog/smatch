@@ -85,10 +85,10 @@ export const api = {
       token,
       body: { round, status },
     }),
-  registerDevice: (token: string, expoToken: string, platform: string) =>
+  registerDevice: (token: string, pushToken: string, platform: string) =>
     request<{ id: number; registered: boolean }>("/api/v2/me/devices/", {
       method: "POST",
       token,
-      body: { expo_push_token: expoToken, platform },
+      body: { push_token: pushToken, provider: "fcm", platform },
     }),
 };

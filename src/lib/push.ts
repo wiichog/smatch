@@ -17,7 +17,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function getExpoPushToken(): Promise<string | null> {
+/** Token NATIVO del dispositivo (FCM en Android / APNs en iOS vía Firebase). */
+export async function getDevicePushToken(): Promise<string | null> {
   if (!Device.isDevice) return null; // no hay push en simulador
   const existing = await Notifications.getPermissionsAsync();
   let status = existing.status;
@@ -26,19 +27,19 @@ export async function getExpoPushToken(): Promise<string | null> {
   }
   if (status !== "granted") return null;
   try {
-    const { data } = await Notifications.getExpoPushTokenAsync();
-    return data;
+    const token = await Notifications.getDevicePushTokenAsync();
+    return typeof token.data === "string" ? token.data : null;
   } catch {
     return null;
   }
 }
 
-/** Registra el dispositivo en el backend. Silencioso si no hay token o permiso. */
+/** Registra el dispositivo (token FCM) en el backend. Best-effort, nunca lanza. */
 export async function registerDevice(authToken: string): Promise<void> {
   try {
-    const expoToken = await getExpoPushToken();
-    if (!expoToken) return;
-    await api.registerDevice(authToken, expoToken, Platform.OS);
+    const fcmToken = await getDevicePushToken();
+    if (!fcmToken) return;
+    await api.registerDevice(authToken, fcmToken, Platform.OS);
   } catch {
     // El push es best-effort: nunca rompe el arranque de la app.
   }
