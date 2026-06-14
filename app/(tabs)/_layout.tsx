@@ -1,11 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
+import { useEffect } from "react";
 
+import { registerDevice } from "@/lib/push";
 import { useAuth } from "@/store/auth";
 import { colors } from "@/theme";
 
 export default function TabsLayout() {
   const token = useAuth((s) => s.token);
+
+  // Registrar el dispositivo para push cuando hay sesión (best-effort).
+  useEffect(() => {
+    if (token) registerDevice(token);
+  }, [token]);
+
   if (!token) return <Redirect href="/login" />;
 
   return (

@@ -21,7 +21,7 @@
         "backgroundColor": "#0E0F12"
       }
     },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": ["expo-router", "expo-secure-store", "expo-notifications"],
     "extra": {
       "apiUrl": "http://localhost:8000"
     }
