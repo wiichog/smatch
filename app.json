@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Smatch",
+    "slug": "smatch",
+    "version": "0.1.0",
+    "scheme": "smatch",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#0E0F12",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.devpackgroup.smatch"
+    },
+    "android": {
+      "package": "com.devpackgroup.smatch",
+      "adaptiveIcon": {
+        "backgroundColor": "#0E0F12"
+      }
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "extra": {
+      "apiUrl": "http://localhost:8000"
+    }
+  }
+}

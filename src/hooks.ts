@@ -1,0 +1,41 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { api, type HistoryRow, type NextRound, type Ranking } from "@/lib/api";
+import { useAuth } from "@/store/auth";
+
+export function useNextRound() {
+  const token = useAuth((s) => s.token);
+  return useQuery<NextRound>({
+    queryKey: ["next-round"],
+    queryFn: () => api.nextRound(token!),
+    enabled: !!token,
+  });
+}
+
+export function useRankings() {
+  const token = useAuth((s) => s.token);
+  return useQuery<{ rankings: Ranking[] }>({
+    queryKey: ["rankings"],
+    queryFn: () => api.rankings(token!),
+    enabled: !!token,
+  });
+}
+
+export function useHistory() {
+  const token = useAuth((s) => s.token);
+  return useQuery<{ history: HistoryRow[] }>({
+    queryKey: ["history"],
+    queryFn: () => api.history(token!),
+    enabled: !!token,
+  });
+}
+
+export function useSetAvailability() {
+  const token = useAuth((s) => s.token);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ round, status }: { round: number; status: string }) =>
+      api.setAvailability(token!, round, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["next-round"] }),
+  });
+}
