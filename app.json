@@ -2,7 +2,7 @@
   "expo": {
     "name": "Smatch",
     "slug": "smatch",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "scheme": "smatch",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -12,8 +12,11 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.devpackgroup.smatch"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.devpackgroup.smatch",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.devpackgroup.smatch",

@@ -14,5 +14,16 @@ android/
 .env
 .env.*
 
+# Credenciales de submit / firma (FUERA del repo, se proveen a EAS aparte)
+credentials/
+*.p8
+*service-account*.json
+play-service-account*.json
+AuthKey_*.p8
+
+# Configs de Firebase (contienen llaves; se inyectan como EAS file secrets en el build)
+google-services.json
+GoogleService-Info.plist
+
 # OS
 .DS_Store

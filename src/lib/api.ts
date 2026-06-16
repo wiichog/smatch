@@ -5,8 +5,12 @@
  */
 import Constants from "expo-constants";
 
+// En builds de EAS, EXPO_PUBLIC_API_URL (perfil production → prod) tiene prioridad.
+// En dev cae al extra.apiUrl de app.json (localhost).
 const BASE_URL: string =
-  (Constants.expoConfig?.extra?.apiUrl as string) ?? "http://localhost:8000";
+  process.env.EXPO_PUBLIC_API_URL ??
+  (Constants.expoConfig?.extra?.apiUrl as string) ??
+  "http://localhost:8000";
 
 export class ApiError extends Error {
   status: number;
