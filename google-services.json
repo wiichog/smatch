@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "16240974822",
+    "project_id": "smatch-dac7e",
+    "storage_bucket": "smatch-dac7e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:16240974822:android:6969bab3239505d301d427",
+        "android_client_info": {
+          "package_name": "com.devpackgroup.smatch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD25VLlAoCUn7mXJnlRaPSfqOlAqdJ80hQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

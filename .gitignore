@@ -21,9 +21,10 @@ credentials/
 play-service-account*.json
 AuthKey_*.p8
 
-# Configs de Firebase (contienen llaves; se inyectan como EAS file secrets en el build)
-google-services.json
-GoogleService-Info.plist
+# Config de CLIENTE de Firebase (google-services.json / GoogleService-Info.plist):
+# NO son secretos (van embebidos en el binario de la app) → SÍ se commitean para que
+# EAS los tenga en el build. El SECRETO real es el service account de firebase-admin,
+# que va en Secrets Manager (FIREBASE_CREDENTIALS), nunca en el repo (ver *service-account* arriba).
 
 # OS
 .DS_Store
