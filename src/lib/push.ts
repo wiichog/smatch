@@ -1,7 +1,10 @@
 /**
- * Registro de push notifications (Expo). Pide permiso, obtiene el Expo push token
- * y lo manda al backend (`/api/v2/me/devices/`). En simulador devuelve null.
+ * Registro de push notifications (Expo Push). Pide permiso, obtiene el Expo push
+ * token y lo manda al backend (`/api/v2/me/devices/`). Expo enruta a APNs (iOS) y
+ * FCM (Android), así que un solo token sirve para ambas plataformas. En simulador
+ * o sin permiso devuelve null.
  */
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -17,29 +20,34 @@ Notifications.setNotificationHandler({
   }),
 });
 
-/** Token NATIVO del dispositivo (FCM en Android / APNs en iOS vía Firebase). */
-export async function getDevicePushToken(): Promise<string | null> {
+/** Expo push token (`ExponentPushToken[...]`). null en simulador o sin permiso. */
+export async function getExpoPushToken(): Promise<string | null> {
   if (!Device.isDevice) return null; // no hay push en simulador
-  const existing = await Notifications.getPermissionsAsync();
-  let status = existing.status;
+  let status = (await Notifications.getPermissionsAsync()).status;
   if (status !== "granted") {
     status = (await Notifications.requestPermissionsAsync()).status;
   }
   if (status !== "granted") return null;
   try {
-    const token = await Notifications.getDevicePushTokenAsync();
-    return typeof token.data === "string" ? token.data : null;
+    // El projectId lo inyecta EAS en app.json (extra.eas.projectId) tras `eas init`.
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any).easConfig?.projectId;
+    const token = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    );
+    return token.data ?? null;
   } catch {
     return null;
   }
 }
 
-/** Registra el dispositivo (token FCM) en el backend. Best-effort, nunca lanza. */
+/** Registra el dispositivo (Expo push token) en el backend. Best-effort, nunca lanza. */
 export async function registerDevice(authToken: string): Promise<void> {
   try {
-    const fcmToken = await getDevicePushToken();
-    if (!fcmToken) return;
-    await api.registerDevice(authToken, fcmToken, Platform.OS);
+    const expoToken = await getExpoPushToken();
+    if (!expoToken) return;
+    await api.registerDevice(authToken, expoToken, Platform.OS);
   } catch {
     // El push es best-effort: nunca rompe el arranque de la app.
   }

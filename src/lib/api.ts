@@ -93,6 +93,6 @@ export const api = {
     request<{ id: number; registered: boolean }>("/api/v2/me/devices/", {
       method: "POST",
       token,
-      body: { push_token: pushToken, provider: "fcm", platform },
+      body: { push_token: pushToken, provider: "expo", platform },
     }),
 };
