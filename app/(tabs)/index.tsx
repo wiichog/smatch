@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Logo } from "@/components/Logo";
 import { Button, Card, H1, Muted, Pill } from "@/components/ui";
 import { useNextRound, useSetAvailability } from "@/hooks";
 import { colors, radius, spacing } from "@/theme";
@@ -24,6 +25,9 @@ export default function JornadaScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       >
+        <View style={styles.brandBar}>
+          <Logo size={26} />
+        </View>
         <H1>Tu próxima jornada</H1>
 
         {isLoading ? (
@@ -96,6 +100,7 @@ export default function JornadaScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg, paddingBottom: spacing.xl },
+  brandBar: { marginBottom: spacing.md },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   league: { fontSize: 16, fontWeight: "700", color: colors.ink900 },
   courtBox: {

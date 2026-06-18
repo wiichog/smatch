@@ -6,7 +6,9 @@
     "scheme": "smatch",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash-icon.png",
       "backgroundColor": "#0E0F12",
       "resizeMode": "contain"
     },
@@ -21,8 +23,12 @@
     "android": {
       "package": "com.devpackgroup.smatch",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0E0F12"
       }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "plugins": ["expo-router", "expo-secure-store", "expo-notifications"],
     "extra": {

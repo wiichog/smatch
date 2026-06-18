@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
@@ -46,9 +47,7 @@ export default function Login() {
       style={styles.root}
     >
       <View style={styles.inner}>
-        <Text style={styles.logo}>
-          Smatch<Text style={{ color: colors.primary }}>.</Text>
-        </Text>
+        <Logo size={48} dark />
         <Text style={styles.subtitle}>Consulta tu jornada y tu ranking.</Text>
 
         <View style={styles.form}>
@@ -80,8 +79,7 @@ export default function Login() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink900 },
   inner: { flex: 1, justifyContent: "center", padding: spacing.lg },
-  logo: { fontSize: 40, fontWeight: "800", letterSpacing: -1, color: colors.textInverse },
-  subtitle: { color: colors.ink400, marginTop: spacing.sm, marginBottom: spacing.xl },
+  subtitle: { color: colors.ink400, marginTop: spacing.md, marginBottom: spacing.xl },
   form: { gap: spacing.md },
   input: {
     backgroundColor: colors.white,
