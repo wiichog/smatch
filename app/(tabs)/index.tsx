@@ -26,7 +26,7 @@ export default function JornadaScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       >
         <View style={styles.brandBar}>
-          <Logo size={26} />
+          <Logo size={26} dark />
         </View>
         <H1>Tu próxima jornada</H1>
 
@@ -35,7 +35,7 @@ export default function JornadaScreen() {
         ) : !round ? (
           <Card style={{ marginTop: spacing.lg, alignItems: "center", paddingVertical: spacing.xl }}>
             <Ionicons name="calendar-outline" size={40} color={colors.ink400} />
-            <Text style={{ fontWeight: "700", marginTop: spacing.sm }}>Sin jornada publicada</Text>
+            <Text style={{ fontWeight: "700", marginTop: spacing.sm, color: colors.text }}>Sin jornada publicada</Text>
             <Muted>Cuando tu club publique la jornada, aparecerá aquí.</Muted>
           </Card>
         ) : (
@@ -102,19 +102,21 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xl },
   brandBar: { marginBottom: spacing.md },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  league: { fontSize: 16, fontWeight: "700", color: colors.ink900 },
+  league: { fontSize: 16, fontWeight: "700", color: colors.text },
   courtBox: {
     backgroundColor: colors.ink900,
     borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     alignItems: "center",
     paddingVertical: spacing.lg,
     marginVertical: spacing.md,
     gap: 4,
   },
-  courtLabel: { color: colors.ink400, fontSize: 11, letterSpacing: 1, fontWeight: "700" },
+  courtLabel: { color: "rgba(255,255,255,0.5)", fontSize: 11, letterSpacing: 1, fontWeight: "700" },
   courtNumber: { color: colors.primary, fontSize: 56, fontWeight: "800", lineHeight: 60 },
-  mate: { color: colors.ink800, fontSize: 15, fontWeight: "500" },
-  section: { fontSize: 18, fontWeight: "800", color: colors.ink900, marginTop: spacing.lg, marginBottom: spacing.sm },
-  team: { fontSize: 15, fontWeight: "600", color: colors.ink900, textAlign: "center" },
-  vs: { textAlign: "center", color: colors.ink400, fontSize: 12, marginVertical: 2 },
+  mate: { color: "rgba(255,255,255,0.72)", fontSize: 15, fontWeight: "500" },
+  section: { fontSize: 18, fontWeight: "800", color: colors.text, marginTop: spacing.lg, marginBottom: spacing.sm },
+  team: { fontSize: 15, fontWeight: "600", color: colors.text, textAlign: "center" },
+  vs: { textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 12, marginVertical: 2 },
 });

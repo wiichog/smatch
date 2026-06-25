@@ -20,9 +20,9 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.ink900,
-        tabBarInactiveTintColor: colors.ink400,
-        tabBarStyle: { backgroundColor: colors.white, borderTopColor: colors.ink100, height: 60, paddingBottom: 8 },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: "rgba(255,255,255,0.5)",
+        tabBarStyle: { backgroundColor: colors.ink900, borderTopColor: colors.cardBorder, height: 60, paddingBottom: 8 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
       }}
     >

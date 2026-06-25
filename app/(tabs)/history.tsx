@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  title: { fontSize: 15, fontWeight: "700", color: colors.ink900 },
-  score: { fontSize: 20, fontWeight: "800", color: colors.ink900 },
+  title: { fontSize: 15, fontWeight: "700", color: colors.text },
+  score: { fontSize: 20, fontWeight: "800", color: colors.text },
   delta: { fontSize: 14, fontWeight: "700" },
 });

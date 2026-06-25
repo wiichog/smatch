@@ -45,7 +45,8 @@
           "resizeMode": "contain",
           "imageWidth": 200
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "apiUrl": "http://localhost:8000",

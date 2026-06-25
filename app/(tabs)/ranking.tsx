@@ -45,6 +45,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg },
   row: { flexDirection: "row", alignItems: "center" },
-  league: { fontSize: 16, fontWeight: "700", color: colors.ink900 },
-  points: { fontSize: 32, fontWeight: "800", color: colors.ink900 },
+  league: { fontSize: 16, fontWeight: "700", color: colors.text },
+  points: { fontSize: 32, fontWeight: "800", color: colors.text },
 });

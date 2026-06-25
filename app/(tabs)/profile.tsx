@@ -52,5 +52,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   initials: { color: colors.primary, fontSize: 28, fontWeight: "800" },
-  name: { fontSize: 20, fontWeight: "800", color: colors.ink900 },
+  name: { fontSize: 20, fontWeight: "800", color: colors.text },
 });
