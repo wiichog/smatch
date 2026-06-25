@@ -14,12 +14,11 @@ import { Platform } from "react-native";
 
 import { api } from "./api";
 
-// Mostrar la notificación aunque la app esté en primer plano.
-// (En Expo SDK 51 el campo es `shouldShowAlert`; en SDK 53+ se separa en
-//  shouldShowBanner/shouldShowList. Mantener shouldShowAlert mientras estemos en 51.)
+// Mostrar la notificación aunque la app esté en primer plano (API de Expo SDK 53+).
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
