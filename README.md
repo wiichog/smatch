@@ -44,15 +44,38 @@ src/
 `/me/profile/` · `/me/next-round/` · `/me/availability/` · `/me/rankings/` ·
 `/me/history/`. Auth: `Authorization: Token <token>`.
 
-## Push notifications (Firebase / FCM)
-Implementadas con `expo-notifications` + `expo-device`. Al iniciar sesión la app
-obtiene el token NATIVO del dispositivo (`getDevicePushTokenAsync`) y lo registra en
-`POST /api/v2/me/devices/` (`provider: "fcm"`). El backend manda el push al publicar
-una jornada (Firebase Admin). Para un build real:
-- Crear proyecto en Firebase y bajar `google-services.json` (Android) / config iOS.
-- En EAS, añadir `android.googleServicesFile` en `app.json` y subir el service account
-  al backend (`FIREBASE_CREDENTIALS` en Secrets Manager) con `PUSH_ENABLED=True`.
+## Push notifications (Expo Push, **no** Firebase nativo)
+Arquitectura:
+1. La app obtiene un **Expo push token** (`ExponentPushToken[...]`) con `expo-notifications`
+   (`src/lib/push.ts`, llamado tras el login en `(tabs)/_layout.tsx`) y lo registra en
+   `POST /api/v2/me/devices/` (`{ push_token, platform }`).
+2. El backend envía a la **API de Expo Push** (`https://exp.host/--/api/v2/push/send`), que
+   rutea a **APNs** (iOS) y **FCM** (Android). El backend no habla con APNs ni FCM directo.
 
-## Build (EAS) — pendiente de configurar
-`eas build` para iOS/Android (íconos/splash con el isotipo).
+> No usamos `@react-native-firebase/*` ni `use_frameworks!` (rompen el build iOS), ni
+> `getDevicePushTokenAsync()` (en iOS da el token APNs crudo, que Expo/FCM rechazan).
+
+### Credenciales (EAS / Apple / Expo — no es código)
+- **iOS:** una **APNs Auth Key (.p8)** de entorno **Production** debe existir en el portal de
+  Apple y estar cargada en Expo. Si Expo apunta a una key inexistente → APNs da
+  `InvalidProviderToken` (403). Config/arreglo: `eas credentials` → iOS → production →
+  Push Notifications Key. (Apple limita keys por cuenta; una key Production sirve para toda
+  la cuenta.) Cambiar la key **no** requiere rebuild.
+- **Android:** subí el service account de FCM: `eas credentials` → Android → Google Service
+  Account → FCM V1.
+- **Backend:** `PUSH_ENABLED=true` (env/Secrets Manager). `EXPO_ACCESS_TOKEN` solo si activás
+  Enhanced Security en Expo. Con `PUSH_ENABLED=false` el backend simula (no toca la red).
+
+### Verificación
+En un iPhone **real** (no simulador) instalado por TestFlight, logueá un jugador y corré en el
+backend: `python manage.py push_diag --user <correo>` (o `--player <id>`). Manda un push y lee
+el **receipt** (entrega real). `InvalidProviderToken` → key APNs mala en EAS;
+`DeviceNotRegistered` → token vencido (se borra, reabrí la app).
+
+## Build (EAS)
+```bash
+eas build --platform ios --profile production
+```
+La imagen está fijada en **Xcode 16.1** (`eas.json`): iOS 18 SDK (lo exige Apple) y estable
+para que `expo-device` compile. **No** usar Xcode 26.x con Expo SDK 51.
 ```

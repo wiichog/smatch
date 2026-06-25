@@ -20,11 +20,12 @@
     },
     "production": {
       "autoIncrement": true,
+      "distribution": "store",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://smatchapi.devpackgroup.com"
       },
       "ios": {
-        "image": "macos-sequoia-15.6-xcode-26.2"
+        "image": "macos-sonoma-14.6-xcode-16.1"
       },
       "android": {
         "buildType": "app-bundle"
@@ -34,11 +35,8 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "REEMPLAZAR_ASC_APP_ID",
-        "appleTeamId": "REEMPLAZAR_APPLE_TEAM_ID",
-        "ascApiKeyPath": "./credentials/AuthKey.p8",
-        "ascApiKeyId": "REEMPLAZAR_ASC_API_KEY_ID",
-        "ascApiKeyIssuerId": "REEMPLAZAR_ASC_API_KEY_ISSUER_ID"
+        "ascAppId": "6783975528",
+        "appleTeamId": "QXV7M29LA8S"
       },
       "android": {
         "serviceAccountKeyPath": "./credentials/play-service-account.json",

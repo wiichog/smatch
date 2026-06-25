@@ -2,7 +2,7 @@
   "expo": {
     "name": "Smatch",
     "slug": "smatch",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "smatch",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -18,14 +18,16 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.devpackgroup.smatch",
-      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": []
       }
     },
     "android": {
       "package": "com.devpackgroup.smatch",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0E0F12"
@@ -37,16 +39,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-notifications",
-      "@react-native-firebase/app",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ]
+      "expo-notifications"
     ],
     "extra": {
       "apiUrl": "http://localhost:8000",

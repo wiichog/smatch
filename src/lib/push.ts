@@ -1,10 +1,13 @@
 /**
- * Registro de push notifications (Firebase Cloud Messaging vía @react-native-firebase).
- * Pide permiso, obtiene el token FCM del dispositivo (Firebase lo enruta a APNs en iOS)
- * y lo manda al backend (`/api/v2/me/devices/`). En simulador o sin permiso devuelve null.
- * expo-notifications se mantiene solo para mostrar la notificación en primer plano.
+ * Registro de push notifications con EXPO PUSH (no Firebase nativo).
+ *
+ * La app obtiene un Expo push token (ExponentPushToken[...]) con expo-notifications y
+ * lo registra en el backend (/api/v2/me/devices/). El backend envía vía la API de Expo
+ * Push, que rutea a APNs (iOS) y FCM (Android). NO usamos @react-native-firebase ni
+ * getDevicePushTokenAsync() (ese da el token APNs crudo, que Expo/FCM rechazan con
+ * InvalidProviderToken/InvalidArgument).
  */
-import messaging from "@react-native-firebase/messaging";
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -12,6 +15,8 @@ import { Platform } from "react-native";
 import { api } from "./api";
 
 // Mostrar la notificación aunque la app esté en primer plano.
+// (En Expo SDK 51 el campo es `shouldShowAlert`; en SDK 53+ se separa en
+//  shouldShowBanner/shouldShowList. Mantener shouldShowAlert mientras estemos en 51.)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -20,33 +25,36 @@ Notifications.setNotificationHandler({
   }),
 });
 
-/** Token FCM del dispositivo. Firebase enruta a APNs en iOS. null sin permiso/simulador. */
-export async function getFcmToken(): Promise<string | null> {
+/** Obtiene el Expo push token del dispositivo. null en simulador o sin permiso. */
+export async function getExpoPushToken(): Promise<string | null> {
   if (!Device.isDevice) return null; // no hay push en simulador
-  const authStatus = await messaging().requestPermission();
-  const granted =
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-  if (!granted) return null;
-  try {
-    if (Platform.OS === "ios") {
-      // En iOS hay que registrar con APNs antes de pedir el token FCM.
-      await messaging().registerDeviceForRemoteMessages();
-    }
-    const token = await messaging().getToken();
-    return token || null;
-  } catch {
-    return null;
+  let { status } = await Notifications.getPermissionsAsync();
+  if (status !== "granted") {
+    status = (await Notifications.requestPermissionsAsync()).status;
   }
+  if (status !== "granted") return null;
+
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  const { data: token } = await Notifications.getExpoPushTokenAsync(
+    projectId ? { projectId } : undefined,
+  );
+  return token || null;
 }
 
-/** Registra el dispositivo (token FCM) en el backend. Best-effort, nunca lanza. */
+/** Registra el dispositivo (Expo push token) en el backend. Best-effort, nunca lanza. */
 export async function registerDevice(authToken: string): Promise<void> {
   try {
-    const fcmToken = await getFcmToken();
-    if (!fcmToken) return;
-    await api.registerDevice(authToken, fcmToken, Platform.OS);
+    const pushToken = await getExpoPushToken();
+    if (!pushToken) return;
+    await api.registerDevice(authToken, pushToken, Platform.OS);
   } catch {
-    // El push es best-effort: nunca rompe el arranque de la app.
+    // Silencioso: Expo Go / simulador / sin permiso nunca rompe el arranque de la app.
   }
 }
