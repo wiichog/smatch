@@ -95,4 +95,45 @@ export const api = {
       token,
       body: { push_token: pushToken, platform },
     }),
+
+  /**
+   * Reporta un error desde la app (superficie de cliente → SOLO reporta).
+   * Con captura de pantalla va multipart; sin ella, JSON. Devuelve el id del ticket.
+   */
+  reportBug: async (
+    token: string,
+    payload: object,
+    imageUri?: string | null
+  ): Promise<{ id: number; status: string }> => {
+    if (imageUri) {
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(payload)) {
+        if (v === undefined || v === null) continue;
+        fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+      }
+      // React Native: el archivo se adjunta como { uri, name, type }.
+      const name = imageUri.split("/").pop() || "captura.jpg";
+      const ext = name.split(".").pop()?.toLowerCase() || "jpg";
+      fd.append("attachment", {
+        uri: imageUri,
+        name,
+        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      } as any);
+      const res = await fetch(`${BASE_URL}/api/v2/me/report/`, {
+        method: "POST",
+        headers: { Authorization: `Token ${token}` },
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(data?.message || data?.error || data?.detail || "Error", res.status);
+      }
+      return data as { id: number; status: string };
+    }
+    return request<{ id: number; status: string }>("/api/v2/me/report/", {
+      method: "POST",
+      token,
+      body: payload,
+    });
+  },
 };
