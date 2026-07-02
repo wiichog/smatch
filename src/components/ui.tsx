@@ -52,7 +52,7 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
 export function Pill({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "success" | "primary" }) {
   const map = {
     neutral: { bg: "rgba(255,255,255,0.10)", fg: "rgba(255,255,255,0.75)" },
-    success: { bg: colors.highlightSoft, fg: colors.highlight },
+    success: { bg: colors.highlightSoft, fg: colors.highlight700 },
     primary: { bg: "#EEFFC0", fg: "#455D00" },
   }[tone];
   return (

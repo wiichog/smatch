@@ -13,7 +13,8 @@ export const colors = {
   ink400: "#7A7F88",
   ink200: "#D2D4D8",
   ink100: "#E9EAEC",
-  highlight: "#00C2A8", // turquesa cancha — highlight puntual
+  highlight: "#00C2A8", // turquesa cancha — highlight puntual (legible SOLO sobre oscuro)
+  highlight700: "#007A6A", // variante oscura: turquesa legible sobre fondo CLARO (pills, chips)
   highlightSoft: "#D6FAF4",
   surface: "#0B0C0E", // fondo de página (oscuro)
   card: "rgba(255,255,255,0.06)", // tarjeta glass sobre el fondo oscuro
