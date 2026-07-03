@@ -73,6 +73,22 @@ export interface HistoryRow {
   points_delta: number;
 }
 
+export type Direction = "up" | "down" | "stay";
+
+export interface DashboardData {
+  enrolled_leagues: {
+    league_id: number;
+    league_name: string;
+    position: number;
+    points: number;
+    current_court_number: number | null;
+    remaining_rounds: number | null;
+    trend: Direction[];
+  }[];
+  open_tournaments: { id: number; name: string; format: string }[];
+  nearby_leagues: { league_id: number; league_name: string; club: string; city: string }[];
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ token: string; user: any }>("/api/v3/auth/login/", {
@@ -80,6 +96,7 @@ export const api = {
       body: { email, password },
     }),
   profile: (token: string) => request<any>("/api/v2/me/profile/", { token }),
+  dashboard: (token: string) => request<DashboardData>("/api/v2/me/dashboard/", { token }),
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
   nextRound: (token: string) => request<NextRound>("/api/v2/me/next-round/", { token }),
   history: (token: string) => request<{ history: HistoryRow[] }>("/api/v2/me/history/", { token }),

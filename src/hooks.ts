@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api, type HistoryRow, type NextRound, type Ranking } from "@/lib/api";
+import { api, type DashboardData, type HistoryRow, type NextRound, type Ranking } from "@/lib/api";
 import { useAuth } from "@/store/auth";
+
+export function useDashboard() {
+  const token = useAuth((s) => s.token);
+  return useQuery<DashboardData>({
+    queryKey: ["dashboard"],
+    queryFn: () => api.dashboard(token!),
+    enabled: !!token,
+  });
+}
 
 export function useNextRound() {
   const token = useAuth((s) => s.token);
