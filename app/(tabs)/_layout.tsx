@@ -1,4 +1,3 @@
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -14,6 +13,15 @@ import { alpha, colors, radius } from "@/theme";
 // Inicio (dashboard) es la pestaña de arranque del grupo.
 export const unstable_settings = { initialRouteName: "dashboard" };
 
+// Props del tabBar personalizado. Tipamos estructuralmente lo que usamos (state +
+// navigation) en vez de depender de @react-navigation: en SDK 56 expo-router dejó de ser
+// compatible con react-navigation, y tener el paquete instalado duplicaba la instancia de
+// navegación → crash al montar los tabs.
+type FloatingTabBarProps = {
+  state: { index: number; routes: { name: string }[] };
+  navigation: { navigate: (name: string) => void };
+};
+
 type IconName = keyof typeof Ionicons.glyphMap;
 const TABS: { name: string; label: string; icon: IconName }[] = [
   { name: "dashboard", label: "Inicio", icon: "home" },
@@ -25,7 +33,7 @@ const TABS: { name: string; label: string; icon: IconName }[] = [
 
 /** Barra de pestañas flotante de vidrio (blur iOS): la pestaña activa se resalta con
  * una pastilla lima tenue; háptica de selección al cambiar. Respeta el safe-area. */
-function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { bottom: (insets.bottom || 10) + 6 }]} pointerEvents="box-none">
