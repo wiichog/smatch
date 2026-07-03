@@ -34,11 +34,13 @@ export function GlassPressable({
   onPress,
   style,
   strong,
+  accessibilityLabel,
 }: {
   children: ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
   strong?: boolean;
+  accessibilityLabel?: string;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const pressIn = () =>
@@ -46,7 +48,13 @@ export function GlassPressable({
   const pressOut = () =>
     Animated.spring(scale, { toValue: 1, speed: 24, bounciness: 7, useNativeDriver: true }).start();
   return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
+    <Pressable
+      onPress={onPress}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
       <Animated.View style={[styles.shadow, { transform: [{ scale }] }]}>
         <BlurView intensity={strong ? 48 : 32} tint="dark" style={styles.blur}>
           <View style={[styles.tint, strong ? styles.tintStrong : null, style]}>{children}</View>

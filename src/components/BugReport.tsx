@@ -8,6 +8,7 @@
  * eso es exclusivo de la consola del superadmin en el panel web.
  */
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { Accelerometer } from "expo-sensors";
 import * as ImagePicker from "expo-image-picker";
 import { usePathname } from "expo-router";
@@ -34,7 +35,7 @@ import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { captureContext, enqueueReport, flushQueue } from "@/lib/report";
 import { useAuth } from "@/store/auth";
-import { colors, radius, spacing } from "@/theme";
+import { alpha, colors, fonts, radius, spacing } from "@/theme";
 
 interface BugReportContextValue {
   open: () => void;
@@ -135,9 +136,11 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
     <BugReportContext.Provider value={{ open }}>
       {children}
 
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={reset}>
+      <Modal visible={visible} transparent animationType="slide" onRequestClose={reset}>
         <View style={styles.backdrop}>
-          <View style={styles.sheet}>
+          <BlurView intensity={44} tint="dark" style={styles.sheet}>
+            <View style={styles.sheetOverlay} />
+            <View style={styles.grabber} />
             <View style={styles.header}>
               <View style={styles.titleRow}>
                 <Ionicons name="bug" size={20} color={colors.primary} />
@@ -193,7 +196,7 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
                 />
               </>
             )}
-          </View>
+          </BlurView>
         </View>
       </Modal>
     </BugReportContext.Provider>
@@ -207,14 +210,30 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: colors.ink900,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.glassBorder,
+    overflow: "hidden",
     padding: spacing.lg,
     paddingBottom: spacing.xl,
     gap: spacing.sm,
+  },
+  sheetOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: alpha(colors.ink900, 0.82),
+  },
+  grabber: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.glassBorder,
+    marginBottom: spacing.sm,
   },
   header: {
     flexDirection: "row",
@@ -223,14 +242,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  title: { color: colors.text, fontSize: 18, fontWeight: "800", letterSpacing: -0.3 },
+  title: { color: colors.text, fontSize: 18, fontFamily: fonts.display, letterSpacing: -0.3 },
   label: { color: colors.text, fontSize: 14, fontWeight: "700", marginBottom: 4 },
   input: {
     minHeight: 96,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glassStrong,
     color: colors.text,
     padding: spacing.md,
     textAlignVertical: "top",

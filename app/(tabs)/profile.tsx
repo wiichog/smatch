@@ -26,7 +26,7 @@ export default function ProfileScreen() {
         </GlassCard>
 
         {/* Reportar un problema */}
-        <GlassPressable onPress={bugReport.open} style={styles.reportRow}>
+        <GlassPressable onPress={bugReport.open} style={styles.reportRow} accessibilityLabel="Reportar un problema">
           <View style={styles.reportIcon}>
             <Ionicons name="bug" size={18} color={colors.primary} />
           </View>
