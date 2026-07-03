@@ -7,6 +7,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Screen } from "@/components/Screen";
 import { Button, Chip, Label, Muted, Pill } from "@/components/ui";
 import { useNextRound, useSetAvailability } from "@/hooks";
+import type { PersonBrief } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { colors, spacing } from "@/theme";
 
@@ -56,15 +57,17 @@ export default function JornadaScreen() {
                 <View style={styles.matesBox}>
                   <Label>Compañeros de cancha</Label>
                   <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
-                    {round.courtmates.map((c: { name: string; position: string }) => (
-                      <View key={c.position} style={styles.mateRow}>
-                        <Avatar name={c.name} size={38} />
-                        <Text style={styles.mateName} numberOfLines={1}>
-                          {c.name}
-                        </Text>
-                        <Chip label={c.position} color={colors.textMuted} />
-                      </View>
-                    ))}
+                    {round.courtmates.map(
+                      (c: { name: string; position: string; avatar_url: string | null }) => (
+                        <View key={c.position} style={styles.mateRow}>
+                          <Avatar name={c.name} uri={c.avatar_url} size={38} />
+                          <Text style={styles.mateName} numberOfLines={1}>
+                            {c.name}
+                          </Text>
+                          <Chip label={c.position} color={colors.textMuted} />
+                        </View>
+                      )
+                    )}
                   </View>
                 </View>
               )}
@@ -72,16 +75,16 @@ export default function JornadaScreen() {
 
             <SectionHeader index={1} title="Partidos" count={round.matches.length} style={styles.section} />
             {round.matches.map(
-              (m: { match_number: number; team_1: string[]; team_2: string[] }) => (
+              (m: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }) => (
                 <GlassCard key={m.match_number} style={{ marginBottom: spacing.md, gap: spacing.sm }}>
                   <Label>Partido {m.match_number}</Label>
-                  <TeamRow names={m.team_1} isMe={isMe} />
+                  <TeamRow players={m.team_1} isMe={isMe} />
                   <View style={styles.vsRow}>
                     <View style={styles.vsLine} />
                     <Text style={styles.vsText}>VS</Text>
                     <View style={styles.vsLine} />
                   </View>
-                  <TeamRow names={m.team_2} isMe={isMe} />
+                  <TeamRow players={m.team_2} isMe={isMe} />
                 </GlassCard>
               )
             )}
@@ -114,29 +117,29 @@ export default function JornadaScreen() {
 
 /** Fila de un equipo de dobles: par de avatares + nombres (uno por línea, sin muro
  * de texto). El jugador actual se resalta con aro lima y etiqueta "Tú". */
-function TeamRow({ names, isMe }: { names: string[]; isMe: (n: string) => boolean }) {
+function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n: string) => boolean }) {
   return (
     <View style={styles.teamRow}>
       <View style={{ flexDirection: "row" }}>
-        {names.slice(0, 2).map((n, i) => (
+        {players.slice(0, 2).map((p, i) => (
           <View
             key={i}
             style={[
               i > 0 && { marginLeft: -14 },
-              isMe(n) && { borderRadius: 999, borderWidth: 2, borderColor: colors.primary },
+              isMe(p.name) && { borderRadius: 999, borderWidth: 2, borderColor: colors.primary },
             ]}
           >
-            <Avatar name={n} size={36} ring />
+            <Avatar name={p.name} uri={p.avatar_url} size={36} ring />
           </View>
         ))}
       </View>
       <View style={{ flex: 1, gap: 1 }}>
-        {names.map((n, i) => (
+        {players.map((p, i) => (
           <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={[styles.playerName, isMe(n) && { color: colors.primary }]} numberOfLines={1}>
-              {n}
+            <Text style={[styles.playerName, isMe(p.name) && { color: colors.primary }]} numberOfLines={1}>
+              {p.name}
             </Text>
-            {isMe(n) && <Chip label="Tú" color={colors.primary} />}
+            {isMe(p.name) && <Chip label="Tú" color={colors.primary} />}
           </View>
         ))}
       </View>

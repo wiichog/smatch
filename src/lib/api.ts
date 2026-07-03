@@ -42,6 +42,12 @@ async function request<T>(
 }
 
 // --- Tipos del jugador (api/v2) ---
+/** Persona en un payload móvil: nombre + avatar (URL de foto o null → iniciales). */
+export interface PersonBrief {
+  name: string;
+  avatar_url: string | null;
+}
+
 export interface NextRound {
   next_round: {
     round_id: number;
@@ -51,8 +57,8 @@ export interface NextRound {
     scheduled_at: string | null;
     court_number: number;
     position: string;
-    courtmates: { name: string; position: string }[];
-    matches: { match_number: number; team_1: string[]; team_2: string[] }[];
+    courtmates: { name: string; position: string; avatar_url: string | null }[];
+    matches: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }[];
   } | null;
 }
 

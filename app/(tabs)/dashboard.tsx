@@ -65,7 +65,7 @@ export default function DashboardScreen() {
               <Muted style={{ marginTop: 2 }}>Tu resumen de hoy</Muted>
             </View>
             <Pressable onPress={() => router.push("/(tabs)/profile")}>
-              <Avatar name={user?.name} size={48} ring />
+              <Avatar name={user?.name} uri={user?.avatar_url} size={48} ring />
             </Pressable>
           </View>
 

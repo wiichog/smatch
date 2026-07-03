@@ -20,7 +20,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Hero del jugador */}
         <GlassCard strong style={{ marginTop: spacing.sm, alignItems: "center", paddingVertical: spacing.xl, gap: spacing.sm }}>
-          <Avatar name={user?.name} size={88} ring />
+          <Avatar name={user?.name} uri={user?.avatar_url} size={88} ring />
           <Text style={styles.name}>{user?.name}</Text>
           <Muted>{user?.email}</Muted>
         </GlassCard>

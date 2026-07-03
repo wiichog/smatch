@@ -47,7 +47,12 @@ export default function Login() {
         setError("Tu cuenta no está vinculada a ningún jugador.");
         return;
       }
-      setSession(data.token, { id: data.user.id, email: data.user.email, name: data.user.name });
+      setSession(data.token, {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        avatar_url: data.user.avatar_url ?? null,
+      });
       router.replace("/(tabs)");
     } catch (e: any) {
       setError(e?.message ?? "No se pudo iniciar sesión.");
