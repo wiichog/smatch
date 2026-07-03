@@ -1,50 +1,80 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { Card, H1, Muted, Pill } from "@/components/ui";
+import { GlassCard } from "@/components/Glass";
+import { Screen } from "@/components/Screen";
+import { Muted } from "@/components/ui";
 import { useRankings } from "@/hooks";
 import type { Ranking } from "@/lib/api";
-import { colors, spacing } from "@/theme";
+import { alpha, colors, fonts, radius, spacing } from "@/theme";
 
 export default function RankingScreen() {
-  const { data, isLoading } = useRankings();
+  const { data, isLoading, refetch, isRefetching } = useRankings();
   const rankings = data?.rankings ?? [];
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <H1>Tu ranking</H1>
+    <Screen title="Ranking" subtitle="Tu posición por liga">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+      >
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={colors.ink400} />
+          <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
         ) : rankings.length === 0 ? (
-          <Muted>Aún no participas en ninguna liga.</Muted>
+          <GlassCard style={{ marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.xl, gap: 8 }}>
+            <Ionicons name="trophy-outline" size={38} color={colors.textMuted} />
+            <Text style={styles.emptyTitle}>Aún sin ranking</Text>
+            <Muted style={{ textAlign: "center" }}>Cuando juegues tu primera jornada verás tu posición aquí.</Muted>
+          </GlassCard>
         ) : (
-          rankings.map((r: Ranking) => (
-            <Card key={r.league_id} style={{ marginTop: spacing.md }}>
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.league}>{r.league_name}</Text>
-                  {r.current_court_number != null && (
-                    <Muted>Cancha {r.current_court_number}</Muted>
-                  )}
+          <GlassCard style={{ marginTop: spacing.sm, gap: spacing.md }}>
+            {rankings.map((r: Ranking, i: number) => {
+              const top = r.position === 1;
+              return (
+                <View key={r.league_id}>
+                  {i > 0 && <View style={styles.hairline} />}
+                  <View style={styles.row}>
+                    <View style={[styles.posBadge, top && styles.posBadgeTop]}>
+                      <Text style={[styles.posBadgeText, top && { color: colors.onPrimary }]}>#{r.position}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.league} numberOfLines={1}>{r.league_name}</Text>
+                      {r.current_court_number != null && <Muted>Cancha {r.current_court_number}</Muted>}
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={styles.points}>{r.points}</Text>
+                      <Text style={styles.ptsLabel}>PTS</Text>
+                    </View>
+                  </View>
                 </View>
-                <View style={{ alignItems: "flex-end", gap: 4 }}>
-                  <Text style={styles.points}>{r.points}</Text>
-                  <Pill label={`#${r.position}`} tone="primary" />
-                </View>
-              </View>
-            </Card>
-          ))
+              );
+            })}
+          </GlassCard>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.lg },
-  row: { flexDirection: "row", alignItems: "center" },
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
+  emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
+  hairline: { height: 1, backgroundColor: colors.glassBorder, marginBottom: spacing.md },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  posBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: alpha(colors.primary, 0.14),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  posBadgeTop: { backgroundColor: colors.primary },
+  posBadgeText: { color: colors.primary, fontWeight: "800", fontSize: 15 },
   league: { fontSize: 16, fontWeight: "700", color: colors.text },
-  points: { fontSize: 32, fontWeight: "800", color: colors.text },
+  points: { fontSize: 26, fontFamily: fonts.display, color: colors.text },
+  ptsLabel: { fontSize: 9, letterSpacing: 1.5, color: colors.textFaint, fontWeight: "700" },
 });

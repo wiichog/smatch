@@ -1,58 +1,78 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { Card, H1, Muted } from "@/components/ui";
+import { GlassCard } from "@/components/Glass";
+import { Screen } from "@/components/Screen";
+import { Muted } from "@/components/ui";
 import { useHistory } from "@/hooks";
 import type { HistoryRow } from "@/lib/api";
-import { colors, spacing } from "@/theme";
+import { alpha, colors, fonts, spacing } from "@/theme";
 
 export default function HistoryScreen() {
-  const { data, isLoading } = useHistory();
+  const { data, isLoading, refetch, isRefetching } = useHistory();
   const rows = data?.history ?? [];
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <H1>Historial</H1>
+    <Screen title="Historial" subtitle="Tus partidos jugados">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+      >
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={colors.ink400} />
+          <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
         ) : rows.length === 0 ? (
-          <Muted>Todavía no tienes partidos jugados.</Muted>
+          <GlassCard style={{ marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.xl, gap: 8 }}>
+            <Ionicons name="time-outline" size={38} color={colors.textMuted} />
+            <Text style={styles.emptyTitle}>Todavía sin partidos</Text>
+            <Muted style={{ textAlign: "center" }}>Aquí verás el resultado y los puntos de cada jornada.</Muted>
+          </GlassCard>
         ) : (
-          rows.map((row: HistoryRow, i: number) => {
-            const won = row.points_delta > 0;
-            return (
-              <Card key={i} style={{ marginTop: spacing.sm }}>
-                <View style={styles.row}>
-                  <View>
-                    <Text style={styles.title}>
-                      Jornada {row.round_number} · Cancha {row.court_number}
-                    </Text>
-                    <Muted>Partido {row.match_number}</Muted>
+          <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+            {rows.map((row: HistoryRow, i: number) => {
+              const won = row.points_delta > 0;
+              const lost = row.points_delta < 0;
+              const tone = won ? colors.success : lost ? colors.danger : colors.textMuted;
+              return (
+                <GlassCard key={i}>
+                  <View style={styles.row}>
+                    <View style={[styles.tick, { backgroundColor: tone }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.title}>
+                        Jornada {row.round_number} · Cancha {row.court_number}
+                      </Text>
+                      <Muted>Partido {row.match_number}</Muted>
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={styles.score}>
+                        {row.games_for} <Text style={styles.scoreSep}>-</Text> {row.games_against}
+                      </Text>
+                      <View style={[styles.deltaPill, { backgroundColor: alpha(tone, 0.16) }]}>
+                        <Text style={{ color: tone, fontWeight: "800", fontSize: 12 }}>
+                          {row.points_delta > 0 ? `+${row.points_delta}` : row.points_delta} pts
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={styles.score}>
-                      {row.games_for} - {row.games_against}
-                    </Text>
-                    <Text style={[styles.delta, { color: won ? colors.highlight : colors.danger }]}>
-                      {row.points_delta > 0 ? `+${row.points_delta}` : row.points_delta}
-                    </Text>
-                  </View>
-                </View>
-              </Card>
-            );
-          })
+                </GlassCard>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.lg },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
+  emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  tick: { width: 4, height: 40, borderRadius: 2 },
   title: { fontSize: 15, fontWeight: "700", color: colors.text },
-  score: { fontSize: 20, fontWeight: "800", color: colors.text },
-  delta: { fontSize: 14, fontWeight: "700" },
+  score: { fontSize: 22, fontFamily: fonts.display, color: colors.text },
+  scoreSep: { color: colors.textFaint },
+  deltaPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginTop: 4 },
 });

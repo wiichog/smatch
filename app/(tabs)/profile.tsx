@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { Avatar } from "@/components/Avatar";
 import { useBugReport } from "@/components/BugReport";
-import { Button, Card, H1, Muted } from "@/components/ui";
+import { GlassCard, GlassPressable } from "@/components/Glass";
+import { Screen } from "@/components/Screen";
+import { Button, Muted } from "@/components/ui";
 import { useAuth } from "@/store/auth";
-import { colors, radius, spacing } from "@/theme";
+import { alpha, colors, radius, spacing } from "@/theme";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -14,20 +16,17 @@ export default function ProfileScreen() {
   const bugReport = useBugReport();
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <H1>Perfil</H1>
-        <Card style={{ marginTop: spacing.lg, alignItems: "center", paddingVertical: spacing.xl }}>
-          <View style={styles.avatar}>
-            <Text style={styles.initials}>
-              {(user?.name ?? "?").slice(0, 1).toUpperCase()}
-            </Text>
-          </View>
+    <Screen title="Perfil">
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Hero del jugador */}
+        <GlassCard strong style={{ marginTop: spacing.sm, alignItems: "center", paddingVertical: spacing.xl, gap: spacing.sm }}>
+          <Avatar name={user?.name} size={88} ring />
           <Text style={styles.name}>{user?.name}</Text>
           <Muted>{user?.email}</Muted>
-        </Card>
+        </GlassCard>
 
-        <Pressable onPress={bugReport.open} style={styles.reportRow} accessibilityLabel="Reportar un problema">
+        {/* Reportar un problema */}
+        <GlassPressable onPress={bugReport.open} style={styles.reportRow}>
           <View style={styles.reportIcon}>
             <Ionicons name="bug" size={18} color={colors.primary} />
           </View>
@@ -35,13 +34,13 @@ export default function ProfileScreen() {
             <Text style={styles.reportTitle}>Reportar un problema</Text>
             <Muted>¿Algo falló? Cuéntanos (o sacude el teléfono).</Muted>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </GlassPressable>
 
         <View style={{ marginTop: spacing.xl }}>
           <Button
             title="Cerrar sesión"
-            variant="outline"
+            variant="glass"
             onPress={() => {
               signOut();
               router.replace("/login");
@@ -49,40 +48,24 @@ export default function ProfileScreen() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.lg },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.full,
-    backgroundColor: colors.ink900,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  initials: { color: colors.primary, fontSize: 28, fontWeight: "800" },
-  name: { fontSize: 20, fontWeight: "800", color: colors.text },
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
+  name: { fontSize: 22, fontWeight: "800", color: colors.text, marginTop: spacing.sm },
   reportRow: {
     marginTop: spacing.xl,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.md,
   },
   reportIcon: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: radius.full,
-    backgroundColor: colors.ink900,
+    backgroundColor: alpha(colors.primary, 0.14),
     alignItems: "center",
     justifyContent: "center",
   },

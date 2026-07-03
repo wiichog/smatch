@@ -1,82 +1,97 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { Logo } from "@/components/Logo";
-import { Button, Card, H1, Muted, Pill } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import { GlassCard } from "@/components/Glass";
+import { SectionHeader } from "@/components/SectionHeader";
+import { Screen } from "@/components/Screen";
+import { Button, Chip, Label, Muted, Pill } from "@/components/ui";
 import { useNextRound, useSetAvailability } from "@/hooks";
-import { colors, radius, spacing } from "@/theme";
+import { useAuth } from "@/store/auth";
+import { colors, spacing } from "@/theme";
 
 export default function JornadaScreen() {
   const { data, isLoading, refetch, isRefetching } = useNextRound();
   const availMut = useSetAvailability();
   const round = data?.next_round;
+  const me = useAuth((s) => s.user?.name) ?? "";
+  const isMe = (name: string) => !!me && name.trim() === me.trim();
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
+    <Screen title="Jornada" subtitle={round?.league ?? "Tu próxima jornada"}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
-        <View style={styles.brandBar}>
-          <Logo size={26} dark />
-        </View>
-        <H1>Tu próxima jornada</H1>
-
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={colors.ink400} />
+          <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
         ) : !round ? (
-          <Card style={{ marginTop: spacing.lg, alignItems: "center", paddingVertical: spacing.xl }}>
-            <Ionicons name="calendar-outline" size={40} color={colors.ink400} />
-            <Text style={{ fontWeight: "700", marginTop: spacing.sm, color: colors.text }}>Sin jornada publicada</Text>
-            <Muted>Cuando tu club publique la jornada, aparecerá aquí.</Muted>
-          </Card>
+          <GlassCard style={{ marginTop: spacing.lg, alignItems: "center", paddingVertical: spacing.xl, gap: 8 }}>
+            <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
+            <Text style={styles.emptyTitle}>Sin jornada publicada</Text>
+            <Muted style={{ textAlign: "center" }}>
+              Cuando tu club publique la jornada, aparecerá aquí.
+            </Muted>
+          </GlassCard>
         ) : (
           <>
-            <Card style={{ marginTop: spacing.lg }}>
-              <View style={styles.rowBetween}>
-                <Text style={styles.league}>{round.league}</Text>
+            {/* Hero: tu cancha */}
+            <GlassCard strong style={{ marginTop: spacing.sm, alignItems: "center", gap: spacing.sm }}>
+              <View style={styles.rowBetweenFull}>
+                <Label>Tu cancha</Label>
                 <Pill label={`Jornada ${round.round_number}`} tone="primary" />
               </View>
-              <View style={styles.courtBox}>
-                <Text style={styles.courtLabel}>TU CANCHA</Text>
-                <Text style={styles.courtNumber}>{round.court_number}</Text>
-                <Pill label={`Posición ${round.position}`} tone="success" />
-              </View>
-              <Muted>Compañeros de cancha</Muted>
-              <View style={{ gap: 6, marginTop: 6 }}>
-                {round.courtmates.map((c: { name: string; position: string }) => (
-                  <Text key={c.position} style={styles.mate}>
-                    {c.position} · {c.name}
-                  </Text>
-                ))}
-              </View>
-            </Card>
+              <Text style={styles.courtNumber}>{round.court_number}</Text>
+              <Chip label={`Posición ${round.position}`} color={colors.highlight} />
 
-            <Text style={styles.section}>Partidos</Text>
+              {round.courtmates.length > 0 && (
+                <View style={styles.matesBox}>
+                  <Label>Compañeros de cancha</Label>
+                  <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+                    {round.courtmates.map((c: { name: string; position: string }) => (
+                      <View key={c.position} style={styles.mateRow}>
+                        <Avatar name={c.name} size={38} />
+                        <Text style={styles.mateName} numberOfLines={1}>
+                          {c.name}
+                        </Text>
+                        <Chip label={c.position} color={colors.textMuted} />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </GlassCard>
+
+            <SectionHeader index={1} title="Partidos" count={round.matches.length} style={styles.section} />
             {round.matches.map(
               (m: { match_number: number; team_1: string[]; team_2: string[] }) => (
-              <Card key={m.match_number} style={{ marginBottom: spacing.sm }}>
-                <Muted>Partido {m.match_number}</Muted>
-                <Text style={styles.team}>{m.team_1.join(" / ")}</Text>
-                <Text style={styles.vs}>vs</Text>
-                <Text style={styles.team}>{m.team_2.join(" / ")}</Text>
-              </Card>
-            ))}
+                <GlassCard key={m.match_number} style={{ marginBottom: spacing.md, gap: spacing.sm }}>
+                  <Label>Partido {m.match_number}</Label>
+                  <TeamRow names={m.team_1} isMe={isMe} />
+                  <View style={styles.vsRow}>
+                    <View style={styles.vsLine} />
+                    <Text style={styles.vsText}>VS</Text>
+                    <View style={styles.vsLine} />
+                  </View>
+                  <TeamRow names={m.team_2} isMe={isMe} />
+                </GlassCard>
+              )
+            )}
 
-            <Text style={styles.section}>¿Vas a jugar?</Text>
+            <SectionHeader index={2} title="¿Vas a jugar?" style={styles.section} />
             <View style={{ flexDirection: "row", gap: spacing.sm }}>
               <View style={{ flex: 1 }}>
                 <Button
                   title={round.availability === "available" ? "✓ Voy" : "Voy"}
-                  variant={round.availability === "available" ? "primary" : "outline"}
+                  variant={round.availability === "available" ? "primary" : "glass"}
                   loading={availMut.isPending}
                   onPress={() => availMut.mutate({ round: round.round_id, status: "available" })}
                 />
@@ -84,7 +99,7 @@ export default function JornadaScreen() {
               <View style={{ flex: 1 }}>
                 <Button
                   title={round.availability === "unavailable" ? "✓ No voy" : "No voy"}
-                  variant="outline"
+                  variant={round.availability === "unavailable" ? "ink" : "glass"}
                   loading={availMut.isPending}
                   onPress={() => availMut.mutate({ round: round.round_id, status: "unavailable" })}
                 />
@@ -93,30 +108,65 @@ export default function JornadaScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
+  );
+}
+
+/** Fila de un equipo de dobles: par de avatares + nombres (uno por línea, sin muro
+ * de texto). El jugador actual se resalta con aro lima y etiqueta "Tú". */
+function TeamRow({ names, isMe }: { names: string[]; isMe: (n: string) => boolean }) {
+  return (
+    <View style={styles.teamRow}>
+      <View style={{ flexDirection: "row" }}>
+        {names.slice(0, 2).map((n, i) => (
+          <View
+            key={i}
+            style={[
+              i > 0 && { marginLeft: -14 },
+              isMe(n) && { borderRadius: 999, borderWidth: 2, borderColor: colors.primary },
+            ]}
+          >
+            <Avatar name={n} size={36} ring />
+          </View>
+        ))}
+      </View>
+      <View style={{ flex: 1, gap: 1 }}>
+        {names.map((n, i) => (
+          <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={[styles.playerName, isMe(n) && { color: colors.primary }]} numberOfLines={1}>
+              {n}
+            </Text>
+            {isMe(n) && <Chip label="Tú" color={colors.primary} />}
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.lg, paddingBottom: spacing.xl },
-  brandBar: { marginBottom: spacing.md },
-  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  league: { fontSize: 16, fontWeight: "700", color: colors.text },
-  courtBox: {
-    backgroundColor: colors.ink900,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
+  emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
+  rowBetweenFull: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: spacing.lg,
-    marginVertical: spacing.md,
-    gap: 4,
+    alignSelf: "stretch",
   },
-  courtLabel: { color: "rgba(255,255,255,0.5)", fontSize: 11, letterSpacing: 1, fontWeight: "700" },
-  courtNumber: { color: colors.primary, fontSize: 56, fontWeight: "800", lineHeight: 60 },
-  mate: { color: "rgba(255,255,255,0.72)", fontSize: 15, fontWeight: "500" },
-  section: { fontSize: 18, fontWeight: "800", color: colors.text, marginTop: spacing.lg, marginBottom: spacing.sm },
-  team: { fontSize: 15, fontWeight: "600", color: colors.text, textAlign: "center" },
-  vs: { textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 12, marginVertical: 2 },
+  courtNumber: { color: colors.primary, fontSize: 68, fontWeight: "800", lineHeight: 74 },
+  matesBox: {
+    alignSelf: "stretch",
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  mateRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  mateName: { flex: 1, color: colors.text, fontSize: 15, fontWeight: "600" },
+  section: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  teamRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  playerName: { color: colors.text, fontSize: 15, fontWeight: "600" },
+  vsRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  vsLine: { flex: 1, height: 1, backgroundColor: colors.glassBorder },
+  vsText: { color: colors.textFaint, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
 });

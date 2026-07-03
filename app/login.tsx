@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useState } from "react";
@@ -9,12 +10,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
-import { colors, radius, spacing } from "@/theme";
+import { alpha, colors, fonts, radius, spacing } from "@/theme";
 
 // Mismo video del hero de la landing / login web (placeholder — reemplazar por
 // un clip de pádel propio servido desde CDN).
@@ -62,67 +64,81 @@ export default function Login() {
         contentFit="cover"
         nativeControls={false}
       />
-      {/* Scrim para legibilidad del formulario sobre el video */}
-      <View style={styles.scrim} />
+      {/* Scrim cinematográfico: transparente arriba (se ve el video) → grafito abajo
+          (legibilidad del formulario), con tinte turquesa como la landing. */}
+      <LinearGradient
+        colors={[alpha(colors.surface, 0.35), alpha(colors.surface, 0.55), alpha(colors.surface, 0.96)]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={[alpha(colors.highlight, 0.14), "transparent"]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.2, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.kav}
-      >
-        <View style={styles.inner}>
-          <Logo size={48} dark />
-          <Text style={styles.subtitle}>Consulta tu jornada y tu ranking.</Text>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.kav}
+        >
+          <View style={styles.inner}>
+            <Logo size={52} dark />
+            <Text style={styles.tagline}>Tu liga de pádel, siempre en juego.</Text>
+            <Text style={styles.subtitle}>Consulta tu jornada, tu cancha y tu ranking.</Text>
 
-          <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Correo"
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-            {!!error && <Text style={styles.error}>{error}</Text>}
-            <Button title="Entrar" onPress={onLogin} loading={loading} />
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="Correo"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Contraseña"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+              {!!error && <Text style={styles.error}>{error}</Text>}
+              <Button title="Entrar" onPress={onLogin} loading={loading} />
+            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink900 },
-  scrim: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(11,12,14,0.62)",
-  },
   kav: { flex: 1 },
-  inner: { flex: 1, justifyContent: "center", padding: spacing.lg },
-  subtitle: { color: "rgba(255,255,255,0.7)", marginTop: spacing.md, marginBottom: spacing.xl },
+  inner: { flex: 1, justifyContent: "flex-end", padding: spacing.lg, paddingBottom: spacing.xl },
+  tagline: {
+    color: colors.text,
+    fontSize: 30,
+    fontFamily: fonts.display,
+    letterSpacing: -0.5,
+    marginTop: spacing.lg,
+    lineHeight: 34,
+  },
+  subtitle: { color: colors.textMuted, marginTop: spacing.sm, marginBottom: spacing.lg, fontSize: 15 },
   form: { gap: spacing.md },
   input: {
-    backgroundColor: "rgba(255,255,255,0.10)",
+    backgroundColor: colors.glassStrong,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    borderRadius: radius.md,
-    minHeight: 52,
+    borderColor: colors.glassBorder,
+    borderRadius: radius.lg,
+    minHeight: 54,
     paddingHorizontal: spacing.md,
     fontSize: 16,
     color: colors.text,
   },
-  error: { color: "#FCA5A5", fontSize: 14 },
+  error: { color: colors.danger, fontSize: 14 },
 });
