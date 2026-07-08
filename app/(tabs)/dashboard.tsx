@@ -136,11 +136,14 @@ export default function DashboardScreen() {
                               {l.current_court_number != null ? `Cancha ${l.current_court_number}` : "Sin cancha"}
                               {l.remaining_rounds != null ? ` · ${l.remaining_rounds} jornadas` : ""}
                             </Muted>
-                            {l.trend.slice(-3).map((d: Direction, k: number) => (
-                              <Text key={k} style={{ color: TREND[d].color, fontWeight: "800", fontSize: 13 }}>
-                                {TREND[d].symbol}
-                              </Text>
-                            ))}
+                            {(l.trend ?? []).slice(-3).map((d: Direction, k: number) => {
+                              const t = TREND[d] ?? TREND.stay;
+                              return (
+                                <Text key={k} style={{ color: t.color, fontWeight: "800", fontSize: 13 }}>
+                                  {t.symbol}
+                                </Text>
+                              );
+                            })}
                           </View>
                         </View>
                         <Text style={styles.points}>{l.points}</Text>

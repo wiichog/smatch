@@ -16,7 +16,7 @@ export default function JornadaScreen() {
   const availMut = useSetAvailability();
   const round = data?.next_round;
   const me = useAuth((s) => s.user?.name) ?? "";
-  const isMe = (name: string) => !!me && name.trim() === me.trim();
+  const isMe = (name?: string | null) => !!me && !!name && name.trim() === me.trim();
 
   return (
     <Screen title="Jornada" subtitle={round?.league ?? "Tu próxima jornada"}>
@@ -53,11 +53,11 @@ export default function JornadaScreen() {
               <Text style={styles.courtNumber}>{round.court_number}</Text>
               <Chip label={`Posición ${round.position}`} color={colors.highlight} />
 
-              {round.courtmates.length > 0 && (
+              {(round.courtmates?.length ?? 0) > 0 && (
                 <View style={styles.matesBox}>
                   <Label>Compañeros de cancha</Label>
                   <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
-                    {round.courtmates.map(
+                    {(round.courtmates ?? []).map(
                       (c: { name: string; position: string; avatar_url: string | null }) => (
                         <View key={c.position} style={styles.mateRow}>
                           <Avatar name={c.name} uri={c.avatar_url} size={38} />
@@ -73,8 +73,8 @@ export default function JornadaScreen() {
               )}
             </GlassCard>
 
-            <SectionHeader index={1} title="Partidos" count={round.matches.length} style={styles.section} />
-            {round.matches.map(
+            <SectionHeader index={1} title="Partidos" count={round.matches?.length ?? 0} style={styles.section} />
+            {(round.matches ?? []).map(
               (m: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }) => (
                 <GlassCard key={m.match_number} style={{ marginBottom: spacing.md, gap: spacing.sm }}>
                   <Label>Partido {m.match_number}</Label>
@@ -117,29 +117,30 @@ export default function JornadaScreen() {
 
 /** Fila de un equipo de dobles: par de avatares + nombres (uno por línea, sin muro
  * de texto). El jugador actual se resalta con aro lima y etiqueta "Tú". */
-function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n: string) => boolean }) {
+function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n?: string | null) => boolean }) {
+  const list = players ?? [];
   return (
     <View style={styles.teamRow}>
       <View style={{ flexDirection: "row" }}>
-        {players.slice(0, 2).map((p, i) => (
+        {list.slice(0, 2).map((p, i) => (
           <View
             key={i}
             style={[
               i > 0 && { marginLeft: -14 },
-              isMe(p.name) && { borderRadius: 999, borderWidth: 2, borderColor: colors.primary },
+              isMe(p?.name) && { borderRadius: 999, borderWidth: 2, borderColor: colors.primary },
             ]}
           >
-            <Avatar name={p.name} uri={p.avatar_url} size={36} ring />
+            <Avatar name={p?.name} uri={p?.avatar_url} size={36} ring />
           </View>
         ))}
       </View>
       <View style={{ flex: 1, gap: 1 }}>
-        {players.map((p, i) => (
+        {list.map((p, i) => (
           <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={[styles.playerName, isMe(p.name) && { color: colors.primary }]} numberOfLines={1}>
-              {p.name}
+            <Text style={[styles.playerName, isMe(p?.name) && { color: colors.primary }]} numberOfLines={1}>
+              {p?.name}
             </Text>
-            {isMe(p.name) && <Chip label="Tú" color={colors.primary} />}
+            {isMe(p?.name) && <Chip label="Tú" color={colors.primary} />}
           </View>
         ))}
       </View>

@@ -50,7 +50,7 @@ export default function Login() {
       setSession(data.token, {
         id: data.user.id,
         email: data.user.email,
-        name: data.user.name,
+        name: data.user.name ?? "",
         avatar_url: data.user.avatar_url ?? null,
       });
       router.replace("/(tabs)");

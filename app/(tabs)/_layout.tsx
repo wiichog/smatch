@@ -1,14 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, type ErrorBoundaryProps } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppErrorFallback } from "@/components/AppErrorFallback";
 import { registerDevice } from "@/lib/push";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, radius } from "@/theme";
+
+/** Red de seguridad por-pestaña: un throw en una pantalla de tab cae aquí, no tumba la app. */
+export function ErrorBoundary(props: ErrorBoundaryProps) {
+  return <AppErrorFallback error={props.error} retry={props.retry} />;
+}
 
 // Inicio (dashboard) es la pestaña de arranque del grupo.
 export const unstable_settings = { initialRouteName: "dashboard" };
