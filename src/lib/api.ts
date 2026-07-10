@@ -106,6 +106,25 @@ export const api = {
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
   nextRound: (token: string) => request<NextRound>("/api/v2/me/next-round/", { token }),
   history: (token: string) => request<{ history: HistoryRow[] }>("/api/v2/me/history/", { token }),
+  // --- Renta de canchas (ticket #30) ---
+  rentalCourts: (token: string) => request<{ courts: any[] }>("/api/v2/rentals/courts/", { token }),
+  courtFreeSlots: (token: string, courtId: number, date: string) =>
+    request<{ date: string; slots: { start_time: string; end_time: string }[] }>(
+      `/api/v2/rentals/courts/${courtId}/free-slots/?date=${date}`,
+      { token }
+    ),
+  createReservation: (
+    token: string,
+    body: {
+      court: number;
+      date: string;
+      start_time: string;
+      end_time: string;
+      pay_method?: string;
+      participants?: { invited_name?: string; invited_phone?: string; player?: number }[];
+    }
+  ) => request<any>("/api/v2/rentals/reservations/", { method: "POST", token, body }),
+
   roundFeedback: (token: string, roundId: number) =>
     request<any>(`/api/v2/me/rounds/${roundId}/feedback/`, { token }),
   submitRoundFeedback: async (
