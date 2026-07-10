@@ -122,6 +122,7 @@ export const api = {
       start_time: string;
       end_time: string;
       pay_method?: string;
+      pay_now?: boolean;
       participants?: { invited_name?: string; invited_phone?: string; player?: number }[];
     }
   ) => request<any>("/api/v2/rentals/reservations/", { method: "POST", token, body }),

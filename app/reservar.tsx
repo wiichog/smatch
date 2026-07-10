@@ -36,6 +36,7 @@ export default function ReservarScreen() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [payNow, setPayNow] = useState(true);
   const [result, setResult] = useState<any>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [booking, setBooking] = useState(false);
@@ -72,6 +73,8 @@ export default function ReservarScreen() {
         date,
         start_time: slot.start_time.slice(0, 5),
         end_time: slot.end_time.slice(0, 5),
+        pay_method: payNow ? "online" : "online",
+        pay_now: payNow,
         participants: invites
           .filter((i) => i.name.trim() || i.phone.trim())
           .map((i) => ({ invited_name: i.name.trim(), invited_phone: i.phone.trim() })),
@@ -211,6 +214,25 @@ export default function ReservarScreen() {
           </>
         )}
 
+        {slot && (
+          <>
+            <Label>Pago</Label>
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              <Pressable style={{ flex: 1 }} onPress={() => setPayNow(true)}>
+                <View style={[styles.courtChip, styles.payChip, payNow && styles.courtChipOn]}>
+                  <Text style={[styles.courtChipText, payNow && { color: colors.onPrimary }]}>Pagar ahora</Text>
+                </View>
+              </Pressable>
+              <Pressable style={{ flex: 1 }} onPress={() => setPayNow(false)}>
+                <View style={[styles.courtChip, styles.payChip, !payNow && styles.courtChipOn]}>
+                  <Text style={[styles.courtChipText, !payNow && { color: colors.onPrimary }]}>Pagar después</Text>
+                </View>
+              </Pressable>
+            </View>
+            {!payNow && <Muted>Si no pagas, la cancha se libera 2 horas antes del juego.</Muted>}
+          </>
+        )}
+
         {error && <Text style={styles.error}>{error}</Text>}
 
         {slot && (
@@ -236,6 +258,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   courtChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  payChip: { alignItems: "center" },
   courtChipText: { color: colors.text, fontSize: 14, fontWeight: "700" },
   input: {
     minHeight: 46,
