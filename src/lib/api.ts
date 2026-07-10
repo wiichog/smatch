@@ -120,6 +120,42 @@ export const api = {
     }),
 
   /**
+   * El jugador edita su propio perfil (ticket #26): contacto, dirección, nacimiento y
+   * foto. Con foto va multipart; sin ella, JSON. Devuelve el perfil actualizado.
+   */
+  updateProfile: async (
+    token: string,
+    fields: Record<string, string>,
+    photoUri?: string | null
+  ): Promise<any> => {
+    if (photoUri) {
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(fields)) {
+        if (v === undefined || v === null) continue;
+        fd.append(k, String(v));
+      }
+      const name = photoUri.split("/").pop() || "foto.jpg";
+      const ext = name.split(".").pop()?.toLowerCase() || "jpg";
+      fd.append("photo", {
+        uri: photoUri,
+        name,
+        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      } as any);
+      const res = await fetch(`${BASE_URL}/api/v2/me/profile/`, {
+        method: "PATCH",
+        headers: { Authorization: `Token ${token}` },
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(data?.message || data?.error || data?.detail || "Error", res.status);
+      }
+      return data;
+    }
+    return request<any>("/api/v2/me/profile/", { method: "PATCH", token, body: fields });
+  },
+
+  /**
    * Reporta un error desde la app (superficie de cliente → SOLO reporta).
    * Con captura de pantalla va multipart; sin ella, JSON. Devuelve el id del ticket.
    */

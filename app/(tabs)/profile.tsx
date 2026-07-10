@@ -25,6 +25,22 @@ export default function ProfileScreen() {
           <Muted>{user?.email}</Muted>
         </GlassCard>
 
+        {/* Editar perfil */}
+        <GlassPressable
+          onPress={() => router.push("/profile-edit")}
+          style={styles.reportRow}
+          accessibilityLabel="Editar perfil"
+        >
+          <View style={styles.reportIcon}>
+            <Ionicons name="person-circle" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportTitle}>Editar perfil</Text>
+            <Muted>Tu foto, contacto, dirección y datos generales.</Muted>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </GlassPressable>
+
         {/* Reportar un problema */}
         <GlassPressable onPress={bugReport.open} style={styles.reportRow} accessibilityLabel="Reportar un problema">
           <View style={styles.reportIcon}>
