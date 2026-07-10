@@ -17,6 +17,7 @@ import { Avatar } from "@/components/Avatar";
 import { GlassCard } from "@/components/Glass";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Screen } from "@/components/Screen";
+import { SponsorBanner } from "@/components/SponsorBanner";
 import { Button, Chip, Label, Muted, Pill } from "@/components/ui";
 import { useNextRound, useSetAvailability } from "@/hooks";
 import { api, type PersonBrief } from "@/lib/api";
@@ -44,6 +45,8 @@ export default function JornadaScreen() {
           />
         }
       >
+        <SponsorBanner />
+
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
         ) : !round ? (

@@ -107,6 +107,13 @@ export const api = {
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
   nextRound: (token: string) => request<NextRound>("/api/v2/me/next-round/", { token }),
   history: (token: string) => request<{ history: HistoryRow[] }>("/api/v2/me/history/", { token }),
+  // --- Banner de patrocinadores (ticket #22) ---
+  sponsors: (token: string) =>
+    request<{ sponsors: { id: number; name: string; logo_url: string | null }[] }>(
+      "/api/v2/sponsors/",
+      { token }
+    ),
+
   // --- Renta de canchas (ticket #30) ---
   rentalCourts: (token: string) => request<{ courts: any[] }>("/api/v2/rentals/courts/", { token }),
   courtFreeSlots: (token: string, courtId: number, date: string) =>
