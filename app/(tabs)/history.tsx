@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { GlassCard } from "@/components/Glass";
 import { Screen } from "@/components/Screen";
@@ -9,6 +10,7 @@ import type { HistoryRow } from "@/lib/api";
 import { alpha, colors, fonts, spacing } from "@/theme";
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const { data, isLoading, refetch, isRefetching } = useHistory();
   const rows = data?.history ?? [];
 
@@ -56,6 +58,14 @@ export default function HistoryScreen() {
                       </View>
                     </View>
                   </View>
+                  <Pressable
+                    onPress={() => router.push(`/dispute/${row.match_id}`)}
+                    style={styles.disputeRow}
+                    accessibilityLabel="Impugnar marcador"
+                  >
+                    <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+                    <Text style={styles.disputeText}>¿Marcador incorrecto? Impugnar</Text>
+                  </Pressable>
                 </GlassCard>
               );
             })}
@@ -75,4 +85,14 @@ const styles = StyleSheet.create({
   score: { fontSize: 22, fontFamily: fonts.display, color: colors.text },
   scoreSep: { color: colors.textFaint },
   deltaPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginTop: 4 },
+  disputeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  disputeText: { color: colors.textMuted, fontSize: 12, fontWeight: "600" },
 });

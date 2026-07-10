@@ -71,6 +71,7 @@ export interface Ranking {
 }
 
 export interface HistoryRow {
+  match_id: number;
   round_number: number;
   court_number: number;
   match_number: number;
@@ -124,6 +125,22 @@ export const api = {
       participants?: { invited_name?: string; invited_phone?: string; player?: number }[];
     }
   ) => request<any>("/api/v2/rentals/reservations/", { method: "POST", token, body }),
+
+  // --- Impugnación de marcador (ticket #32) ---
+  raiseDispute: (token: string, matchId: number, team1: number, team2: number) =>
+    request<{ id: number; status: string }>(`/api/v2/matches/${matchId}/dispute/`, {
+      method: "POST",
+      token,
+      body: { team1_games: team1, team2_games: team2 },
+    }),
+  myDisputes: (token: string) =>
+    request<{ disputes: any[] }>("/api/v2/me/disputes/", { token }),
+  voteDispute: (token: string, disputeId: number, approve: boolean) =>
+    request<{ id: number; status: string }>(`/api/v2/disputes/${disputeId}/vote/`, {
+      method: "POST",
+      token,
+      body: { approve },
+    }),
 
   roundFeedback: (token: string, roundId: number) =>
     request<any>(`/api/v2/me/rounds/${roundId}/feedback/`, { token }),

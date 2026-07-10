@@ -57,6 +57,22 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
         </GlassPressable>
 
+        {/* Impugnaciones por votar */}
+        <GlassPressable
+          onPress={() => router.push("/disputes")}
+          style={styles.reportRow}
+          accessibilityLabel="Impugnaciones"
+        >
+          <View style={styles.reportIcon}>
+            <Ionicons name="flag" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportTitle}>Impugnaciones</Text>
+            <Muted>Vota los marcadores impugnados de tus partidos.</Muted>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </GlassPressable>
+
         {/* Reportar un problema */}
         <GlassPressable onPress={bugReport.open} style={styles.reportRow} accessibilityLabel="Reportar un problema">
           <View style={styles.reportIcon}>
