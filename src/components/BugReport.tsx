@@ -23,8 +23,11 @@ import {
 } from "react";
 import {
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -137,7 +140,10 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
       {children}
 
       <Modal visible={visible} transparent animationType="slide" onRequestClose={reset}>
-        <View style={styles.backdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.backdrop}
+        >
           <BlurView intensity={44} tint="dark" style={styles.sheet}>
             <View style={styles.sheetOverlay} />
             <View style={styles.grabber} />
@@ -163,7 +169,12 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
                 <Button title="Listo" onPress={reset} />
               </View>
             ) : (
-              <>
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
                 <Text style={styles.label}>¿Qué pasó?</Text>
                 <TextInput
                   style={styles.input}
@@ -194,10 +205,10 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
                   loading={sending}
                   disabled={!description.trim()}
                 />
-              </>
+              </ScrollView>
             )}
           </BlurView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </BugReportContext.Provider>
   );
@@ -218,7 +229,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xl,
     gap: spacing.sm,
+    // Nunca cubrir toda la pantalla: deja el contenido desplazable cuando sube el teclado.
+    maxHeight: "88%",
   },
+  scroll: { flexShrink: 1 },
+  scrollContent: { gap: spacing.sm, paddingBottom: spacing.sm },
   sheetOverlay: {
     position: "absolute",
     top: 0,
