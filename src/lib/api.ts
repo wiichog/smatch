@@ -106,6 +106,33 @@ export const api = {
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
   nextRound: (token: string) => request<NextRound>("/api/v2/me/next-round/", { token }),
   history: (token: string) => request<{ history: HistoryRow[] }>("/api/v2/me/history/", { token }),
+  roundFeedback: (token: string, roundId: number) =>
+    request<any>(`/api/v2/me/rounds/${roundId}/feedback/`, { token }),
+  submitRoundFeedback: async (
+    token: string,
+    roundId: number,
+    fields: { comment: string; experience: string },
+    photoUri?: string | null
+  ): Promise<any> => {
+    const path = `/api/v2/me/rounds/${roundId}/feedback/`;
+    if (photoUri) {
+      const fd = new FormData();
+      fd.append("comment", fields.comment);
+      fd.append("experience", fields.experience);
+      const name = photoUri.split("/").pop() || "foto.jpg";
+      const ext = name.split(".").pop()?.toLowerCase() || "jpg";
+      fd.append("photo", { uri: photoUri, name, type: `image/${ext === "jpg" ? "jpeg" : ext}` } as any);
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: { Authorization: `Token ${token}` },
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new ApiError(data?.message || data?.error || data?.detail || "Error", res.status);
+      return data;
+    }
+    return request<any>(path, { method: "POST", token, body: fields });
+  },
   setAvailability: (token: string, round: number, status: string) =>
     request<{ round: number; status: string }>("/api/v2/me/availability/", {
       method: "POST",

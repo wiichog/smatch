@@ -1,5 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { GlassCard } from "@/components/Glass";
@@ -7,9 +19,9 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Screen } from "@/components/Screen";
 import { Button, Chip, Label, Muted, Pill } from "@/components/ui";
 import { useNextRound, useSetAvailability } from "@/hooks";
-import type { PersonBrief } from "@/lib/api";
+import { api, type PersonBrief } from "@/lib/api";
 import { useAuth } from "@/store/auth";
-import { colors, spacing } from "@/theme";
+import { colors, radius, spacing } from "@/theme";
 
 export default function JornadaScreen() {
   const { data, isLoading, refetch, isRefetching } = useNextRound();
@@ -108,6 +120,8 @@ export default function JornadaScreen() {
                 />
               </View>
             </View>
+
+            <FeedbackSection roundId={round.round_id} />
           </>
         )}
       </ScrollView>
@@ -148,8 +162,109 @@ function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n?: string 
   );
 }
 
+/** Bitácora de la jornada (ticket #31): comentario, experiencia y foto del propio jugador. */
+function FeedbackSection({ roundId }: { roundId: number }) {
+  const token = useAuth((s) => s.token);
+  const [comment, setComment] = useState("");
+  const [experience, setExperience] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    api
+      .roundFeedback(token, roundId)
+      .then((fb) => {
+        setComment(fb?.comment ?? "");
+        setExperience(fb?.experience ?? "");
+        setSavedUrl(fb?.photo_url ?? null);
+      })
+      .catch(() => {});
+  }, [token, roundId]);
+
+  async function pick() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+    });
+    if (!res.canceled && res.assets[0]) setPhotoUri(res.assets[0].uri);
+  }
+
+  async function save() {
+    if (!token) return;
+    setSaving(true);
+    setError(null);
+    setDone(false);
+    try {
+      const fb = await api.submitRoundFeedback(token, roundId, { comment, experience }, photoUri);
+      setSavedUrl(fb?.photo_url ?? savedUrl);
+      setPhotoUri(null);
+      setDone(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const preview = photoUri ?? savedUrl;
+
+  return (
+    <>
+      <SectionHeader index={3} title="Tu bitácora" style={styles.section} />
+      <GlassCard style={{ gap: spacing.sm }}>
+        <Label>Comentario</Label>
+        <TextInput
+          style={styles.fbInput}
+          multiline
+          value={comment}
+          onChangeText={setComment}
+          placeholder="¿Cómo estuvo tu jornada?"
+          placeholderTextColor={colors.textMuted}
+        />
+        <Label>Tu experiencia</Label>
+        <TextInput
+          style={styles.fbInput}
+          multiline
+          value={experience}
+          onChangeText={setExperience}
+          placeholder="Cuéntanos tu experiencia…"
+          placeholderTextColor={colors.textMuted}
+        />
+        <Pressable onPress={pick} style={styles.fbAttach}>
+          <Ionicons name="image-outline" size={18} color={colors.primary} />
+          <Text style={styles.fbAttachText}>{preview ? "Cambiar foto" : "Adjuntar foto (opcional)"}</Text>
+        </Pressable>
+        {preview && <Image source={{ uri: preview }} style={styles.fbThumb} />}
+        {error && <Text style={{ color: colors.danger, fontSize: 13 }}>{error}</Text>}
+        {done && <Text style={{ color: colors.highlight, fontSize: 13 }}>Guardado ✓</Text>}
+        <Button title="Guardar bitácora" onPress={save} loading={saving} />
+      </GlassCard>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
+  fbInput: {
+    minHeight: 64,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glassStrong,
+    color: colors.text,
+    padding: spacing.md,
+    textAlignVertical: "top",
+    fontSize: 15,
+  },
+  fbAttach: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xs },
+  fbAttachText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
+  fbThumb: { width: 96, height: 96, borderRadius: radius.md },
   emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
   rowBetweenFull: {
     flexDirection: "row",
