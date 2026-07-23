@@ -96,6 +96,44 @@ export interface DashboardData {
   nearby_leagues: { league_id: number; league_name: string; club: string; city: string }[];
 }
 
+/**
+ * Deriva un `{ name, type }` seguros para el campo multipart `photo`. El backend
+ * (`validate_photo`) exige una extensión válida (jpg/jpeg/png/webp): si el asset de
+ * expo-image-picker o el URI local no la traen, cae a `photo.jpg` + `image/jpeg`.
+ * Garantiza que el `name` SIEMPRE lleve una extensión válida coherente con el `type`.
+ */
+function resolvePhotoPart(
+  uri: string,
+  meta?: { name?: string | null; type?: string | null } | null
+): { name: string; type: string } {
+  const MIME_BY_EXT: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+  };
+  const EXT_BY_MIME: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+  const validExt = (s?: string | null): string => {
+    const clean = ((s ?? "").trim().toLowerCase().split(/[?#]/)[0] ?? "");
+    const parts = clean.split(".");
+    const ext = parts.length > 1 ? (parts.pop() ?? "") : "";
+    return ext in MIME_BY_EXT ? ext : "";
+  };
+
+  const mimeExt = EXT_BY_MIME[(meta?.type ?? "").trim().toLowerCase()] ?? "";
+  // Fuente de verdad para la extensión: fileName del asset → URI local → mimeType → jpg.
+  const ext = validExt(meta?.name) || validExt(uri) || mimeExt || "jpg";
+  const type = MIME_BY_EXT[ext] ?? "image/jpeg";
+  // Conserva el nombre del asset si ya trae extensión válida; si no, photo.<ext>.
+  const name = validExt(meta?.name) ? (meta?.name ?? "").trim() : `photo.${ext}`;
+  return { name, type };
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ token: string; user: any }>("/api/v3/auth/login/", {
@@ -197,7 +235,8 @@ export const api = {
   updateProfile: async (
     token: string,
     fields: Record<string, string>,
-    photoUri?: string | null
+    photoUri?: string | null,
+    photoMeta?: { name?: string | null; type?: string | null } | null
   ): Promise<any> => {
     if (photoUri) {
       const fd = new FormData();
@@ -205,13 +244,9 @@ export const api = {
         if (v === undefined || v === null) continue;
         fd.append(k, String(v));
       }
-      const name = photoUri.split("/").pop() || "foto.jpg";
-      const ext = name.split(".").pop()?.toLowerCase() || "jpg";
-      fd.append("photo", {
-        uri: photoUri,
-        name,
-        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
-      } as any);
+      // name/type robustos: usa el fileName/mimeType del asset; si faltan, jpg/jpeg.
+      const part = resolvePhotoPart(photoUri, photoMeta);
+      fd.append("photo", { uri: photoUri, name: part.name, type: part.type } as any);
       const res = await fetch(`${BASE_URL}/api/v2/me/profile/`, {
         method: "PATCH",
         headers: { Authorization: `Token ${token}` },
