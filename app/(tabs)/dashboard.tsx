@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { Avatar } from "@/components/Avatar";
+import { CourtBackdrop } from "@/components/CourtBackdrop";
 import { GlassCard } from "@/components/Glass";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Label, Muted } from "@/components/ui";
@@ -38,6 +39,9 @@ export default function DashboardScreen() {
   return (
     <View style={{ flex: 1 }}>
       <AuroraBackground />
+      {/* Cabecera con identidad: la cancha se insinúa detrás del saludo y se disuelve
+          antes de llegar a las tarjetas (intensidad baja, decorativo puro). */}
+      <CourtBackdrop intensity={0.45} height={300} />
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <ScrollView
           contentContainerStyle={styles.content}

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
+import { CourtBackdrop } from "@/components/CourtBackdrop";
 import { GlassCard } from "@/components/Glass";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Screen } from "@/components/Screen";
@@ -50,7 +51,9 @@ export default function JornadaScreen() {
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
         ) : !round ? (
-          <GlassCard style={{ marginTop: spacing.lg, alignItems: "center", paddingVertical: spacing.xl, gap: 8 }}>
+          <GlassCard style={styles.emptyCard}>
+            {/* Motivo de cancha nocturna: llena el vacío sin robarle protagonismo al mensaje */}
+            <CourtBackdrop />
             <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>Sin jornada publicada</Text>
             <Muted style={{ textAlign: "center" }}>
@@ -268,6 +271,13 @@ const styles = StyleSheet.create({
   fbAttach: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xs },
   fbAttachText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
   fbThumb: { width: 96, height: 96, borderRadius: radius.md },
+  emptyCard: {
+    marginTop: spacing.lg,
+    alignItems: "center",
+    paddingVertical: spacing.xl + spacing.md,
+    gap: 8,
+    overflow: "hidden", // recorta el motivo de cancha al radio de la tarjeta
+  },
   emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
   rowBetweenFull: {
     flexDirection: "row",
