@@ -168,7 +168,7 @@ export default function DashboardScreen() {
                       {i > 0 && <View style={styles.hairline} />}
                       <View style={styles.leagueRow}>
                         <View style={styles.iconBadge}>
-                          <Ionicons name="trophy" size={16} color={colors.primary} />
+                          <Ionicons name="podium" size={16} color={colors.primary} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={styles.rowTitle} numberOfLines={1}>{t.name}</Text>
