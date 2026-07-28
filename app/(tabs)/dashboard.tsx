@@ -134,7 +134,11 @@ export default function DashboardScreen() {
                           <Text style={styles.posBadgeText}>#{l.position}</Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.rowTitle} numberOfLines={1}>{l.league_name}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            {/* Logo del club (ticket #77): sin foto, Avatar cae a iniciales. */}
+                            <Avatar name={l.league_name} uri={l.logo_url} size={18} />
+                            <Text style={[styles.rowTitle, { flex: 1 }]} numberOfLines={1}>{l.league_name}</Text>
+                          </View>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
                             <Muted>
                               {l.current_court_number != null ? `Cancha ${l.current_court_number}` : "Sin cancha"}
@@ -167,9 +171,14 @@ export default function DashboardScreen() {
                     <View key={t.id}>
                       {i > 0 && <View style={styles.hairline} />}
                       <View style={styles.leagueRow}>
-                        <View style={styles.iconBadge}>
-                          <Ionicons name="podium" size={16} color={colors.primary} />
-                        </View>
+                        {/* Logo del club (ticket #77); sin logo, cae al ícono genérico. */}
+                        {t.logo_url ? (
+                          <Avatar name={t.name} uri={t.logo_url} size={42} />
+                        ) : (
+                          <View style={styles.iconBadge}>
+                            <Ionicons name="podium" size={16} color={colors.primary} />
+                          </View>
+                        )}
                         <View style={{ flex: 1 }}>
                           <Text style={styles.rowTitle} numberOfLines={1}>{t.name}</Text>
                           <Muted>Inscripción abierta</Muted>
@@ -191,9 +200,14 @@ export default function DashboardScreen() {
                     <View key={l.league_id}>
                       {i > 0 && <View style={styles.hairline} />}
                       <View style={styles.leagueRow}>
-                        <View style={styles.iconBadge}>
-                          <Ionicons name="location" size={16} color={colors.highlight} />
-                        </View>
+                        {/* Logo del club (ticket #77); sin logo, cae al ícono genérico. */}
+                        {l.logo_url ? (
+                          <Avatar name={l.club} uri={l.logo_url} size={42} />
+                        ) : (
+                          <View style={styles.iconBadge}>
+                            <Ionicons name="location" size={16} color={colors.highlight} />
+                          </View>
+                        )}
                         <View style={{ flex: 1 }}>
                           <Text style={styles.rowTitle} numberOfLines={1}>{l.league_name}</Text>
                           <Muted numberOfLines={1}>

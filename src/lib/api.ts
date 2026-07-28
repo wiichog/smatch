@@ -53,6 +53,9 @@ export interface NextRound {
     round_id: number;
     availability: "available" | "unavailable" | "pending";
     league: string;
+    // Material digital del club (ticket #77): logo y fondo, o null si el club no los subió.
+    logo_url?: string | null;
+    background_image_url?: string | null;
     round_number: number;
     scheduled_at: string | null;
     court_number: number;
@@ -91,9 +94,25 @@ export interface DashboardData {
     current_court_number: number | null;
     remaining_rounds: number | null;
     trend: Direction[];
+    // Material digital del club (ticket #77): logo y fondo, o null si el club no los subió.
+    logo_url?: string | null;
+    background_image_url?: string | null;
   }[];
-  open_tournaments: { id: number; name: string; format: string }[];
-  nearby_leagues: { league_id: number; league_name: string; club: string; city: string }[];
+  open_tournaments: {
+    id: number;
+    name: string;
+    format: string;
+    logo_url?: string | null;
+    background_image_url?: string | null;
+  }[];
+  nearby_leagues: {
+    league_id: number;
+    league_name: string;
+    club: string;
+    city: string;
+    logo_url?: string | null;
+    background_image_url?: string | null;
+  }[];
 }
 
 /**
