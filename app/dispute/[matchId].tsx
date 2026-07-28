@@ -14,6 +14,20 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { colors, radius, spacing } from "@/theme";
 
+/**
+ * Ticket #67: un set de pádel no pasa de 7 (7-6 o 6-7 es el tope). El backend ya lo
+ * rechaza en `leagues/services/disputes.py`; aquí simplemente no dejamos teclearlo,
+ * para que el jugador no descubra el límite con un error después de enviar.
+ */
+const MAX_GAMES = 7;
+
+/** Filtra no-dígitos, corta a un carácter e ignora la tecla si pasa de 7. */
+function limitGames(value: string, prev: string): string {
+  const digit = value.replace(/\D/g, "").slice(0, 1);
+  if (digit !== "" && Number(digit) > MAX_GAMES) return prev;
+  return digit;
+}
+
 export default function DisputeScreen() {
   const router = useRouter();
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
@@ -70,8 +84,9 @@ export default function DisputeScreen() {
                 <TextInput
                   style={styles.score}
                   value={t1}
-                  onChangeText={(v) => setT1(v.replace(/\D/g, ""))}
+                  onChangeText={(v) => setT1((prev) => limitGames(v, prev))}
                   keyboardType="number-pad"
+                  maxLength={1}
                   placeholder="0"
                   placeholderTextColor={colors.textFaint}
                 />
@@ -82,8 +97,9 @@ export default function DisputeScreen() {
                 <TextInput
                   style={styles.score}
                   value={t2}
-                  onChangeText={(v) => setT2(v.replace(/\D/g, ""))}
+                  onChangeText={(v) => setT2((prev) => limitGames(v, prev))}
                   keyboardType="number-pad"
+                  maxLength={1}
                   placeholder="0"
                   placeholderTextColor={colors.textFaint}
                 />
