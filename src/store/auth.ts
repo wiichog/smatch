@@ -42,7 +42,13 @@ export const useAuth = create<AuthState>()(
       name: "smatch-auth",
       storage: createJSONStorage(() => secureStorage),
       partialize: (s) => ({ token: s.token, user: s.user }),
-      onRehydrateStorage: () => (state) => state?.setHydrated(),
+      // Marca hidratado SIEMPRE, también si SecureStore falla (`state` llega undefined).
+      // Si no, `hydrated` se queda en false para siempre: la app se clava en el spinner
+      // de `/` y todo tap de push se ignora en silencio esperando una sesión que nunca
+      // se resuelve. Sin datos guardados el resultado correcto es "no hay sesión".
+      onRehydrateStorage: () => (state) => {
+        (state ?? useAuth.getState()).setHydrated();
+      },
     }
   )
 );

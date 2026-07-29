@@ -11,6 +11,8 @@ import { GlassCard, GlassPressable } from "@/components/Glass";
 import { Screen } from "@/components/Screen";
 import { Button, Muted } from "@/components/ui";
 import { api } from "@/lib/api";
+import { clearPendingRoute } from "@/lib/notifications";
+import { unregisterDevice } from "@/lib/push";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, radius, spacing } from "@/theme";
 
@@ -145,8 +147,17 @@ export default function ProfileScreen() {
           <Button
             title="Cerrar sesión"
             variant="glass"
-            onPress={() => {
+            onPress={async () => {
+              // Suelta el dispositivo ANTES de tirar el token: si no, este teléfono
+              // sigue recibiendo los push del jugador que acaba de salir.
+              await unregisterDevice(token);
               signOut();
+              // El destino de un push pendiente era de quien acaba de salir: no puede
+              // replayearse cuando entre otra persona en este teléfono.
+              clearPendingRoute();
+              // Y borra la caché: las queryKeys no llevan el id del jugador, así que
+              // el siguiente en entrar vería la jornada y el ranking del anterior.
+              queryClient.clear();
               router.replace("/login");
             }}
           />

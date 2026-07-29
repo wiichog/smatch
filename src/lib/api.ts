@@ -51,6 +51,11 @@ export interface PersonBrief {
 export interface NextRound {
   next_round: {
     round_id: number;
+    // Un deep link de push puede abrir una jornada ya cerrada: sin esto la pantalla
+    // ofrecería confirmar disponibilidad de algo que ya se jugó.
+    status: "draft" | "published" | "closed";
+    league_id: number;
+    org_id: number;
     availability: "available" | "unavailable" | "pending";
     league: string;
     // Material digital del club (ticket #77): logo y fondo, o null si el club no los subió.
@@ -162,7 +167,13 @@ export const api = {
   profile: (token: string) => request<any>("/api/v2/me/profile/", { token }),
   dashboard: (token: string) => request<DashboardData>("/api/v2/me/dashboard/", { token }),
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
-  nextRound: (token: string) => request<NextRound>("/api/v2/me/next-round/", { token }),
+  // `roundId` pide UNA jornada concreta: es lo que usa el deep link de un push, que
+  // trae el id. Sin él, el servidor elige la más próxima del jugador.
+  nextRound: (token: string, roundId?: number) =>
+    request<NextRound>(
+      `/api/v2/me/next-round/${roundId ? `?round_id=${roundId}` : ""}`,
+      { token }
+    ),
   history: (token: string) => request<{ history: HistoryRow[] }>("/api/v2/me/history/", { token }),
   // --- Banner de patrocinadores (ticket #22) ---
   sponsors: (token: string) =>
@@ -245,6 +256,13 @@ export const api = {
       method: "POST",
       token,
       body: { push_token: pushToken, platform },
+    }),
+  /** Suelta el token al cerrar sesión, para que este teléfono deje de recibir sus push. */
+  unregisterDevice: (token: string, pushToken: string) =>
+    request<{ registered: boolean; deleted: boolean }>("/api/v2/me/devices/", {
+      method: "DELETE",
+      token,
+      body: { push_token: pushToken },
     }),
 
   /**

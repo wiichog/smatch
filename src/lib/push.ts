@@ -57,3 +57,26 @@ export async function registerDevice(authToken: string): Promise<void> {
     // Silencioso: Expo Go / simulador / sin permiso nunca rompe el arranque de la app.
   }
 }
+
+/**
+ * Suelta el dispositivo al cerrar sesión. Best-effort, nunca lanza.
+ *
+ * Sin esto, un teléfono prestado sigue recibiendo los push del jugador anterior: el
+ * token vive en el backend hasta que otra cuenta lo reclame con un login.
+ */
+export async function unregisterDevice(authToken: string | null): Promise<void> {
+  if (!authToken) return;
+  const soltar = (async () => {
+    // Sin pedir permisos: si nunca se otorgaron no hay token que soltar.
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== "granted") return;
+    const pushToken = await getExpoPushToken();
+    if (!pushToken) return;
+    await api.unregisterDevice(authToken, pushToken);
+  })();
+  // Con techo: `fetch` en React Native no trae timeout, y esto está en el camino del
+  // botón de cerrar sesión. Si la red no contesta, se cierra igual — el token se
+  // reasigna solo cuando otra cuenta entre desde este teléfono.
+  const techo = new Promise<void>((resolve) => setTimeout(resolve, 4000));
+  await Promise.race([soltar.catch(() => {}), techo]);
+}

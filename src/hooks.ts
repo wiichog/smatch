@@ -12,11 +12,15 @@ export function useDashboard() {
   });
 }
 
-export function useNextRound() {
+/**
+ * La jornada del jugador. Con `roundId` pide ESA jornada (deep link desde un push);
+ * sin él, la más próxima. El id va en la queryKey para que las dos no se pisen la caché.
+ */
+export function useNextRound(roundId?: number) {
   const token = useAuth((s) => s.token);
   return useQuery<NextRound>({
-    queryKey: ["next-round"],
-    queryFn: () => api.nextRound(token!),
+    queryKey: ["next-round", roundId ?? null],
+    queryFn: () => api.nextRound(token!, roundId),
     enabled: !!token,
   });
 }
@@ -45,6 +49,7 @@ export function useSetAvailability() {
   return useMutation({
     mutationFn: ({ round, status }: { round: number; status: string }) =>
       api.setAvailability(token!, round, status),
+    // Prefijo: invalida tanto la "próxima jornada" como la pedida por id.
     onSuccess: () => qc.invalidateQueries({ queryKey: ["next-round"] }),
   });
 }

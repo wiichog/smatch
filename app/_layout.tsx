@@ -14,6 +14,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppErrorFallback } from "@/components/AppErrorFallback";
 import { BugReportProvider } from "@/components/BugReport";
+import { useNotificationRouting } from "@/lib/notifications";
 
 /** Red de seguridad global: cualquier throw en render de una pantalla cae aquí en vez de
  *  tumbar la app. expo-router usa este export por convención. */
@@ -29,6 +30,11 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [client] = useState(() => queryClient);
+
+  // Tocar un push navega a la pantalla que corresponde. Va aquí, en la raíz, para
+  // atrapar también el arranque en frío (la notificación que abrió la app).
+  useNotificationRouting();
+
   const [fontsLoaded] = useFonts({
     SpaceGrotesk_300Light,
     SpaceGrotesk_500Medium,

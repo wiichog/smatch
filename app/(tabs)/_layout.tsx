@@ -17,6 +17,9 @@ export function ErrorBoundary(props: ErrorBoundaryProps) {
 }
 
 // Inicio (dashboard) es la pestaña de arranque del grupo.
+// La pestaña de jornada vive en `jornada.tsx`, no en `index.tsx`: como `(tabs)` es un
+// grupo (no aparece en la URL), un `index.tsx` aquí chocaría con `app/index.tsx` por la
+// ruta `/` y no habría href estable al que mandar un deep link de push.
 export const unstable_settings = { initialRouteName: "dashboard" };
 
 // Props del tabBar personalizado. Tipamos estructuralmente lo que usamos (state +
@@ -31,7 +34,7 @@ type FloatingTabBarProps = {
 type IconName = keyof typeof Ionicons.glyphMap;
 const TABS: { name: string; label: string; icon: IconName }[] = [
   { name: "dashboard", label: "Inicio", icon: "home" },
-  { name: "index", label: "Jornada", icon: "tennisball" },
+  { name: "jornada", label: "Jornada", icon: "tennisball" },
   { name: "ranking", label: "Ranking", icon: "trophy" },
   { name: "history", label: "Historial", icon: "time" },
   { name: "profile", label: "Perfil", icon: "person" },
@@ -94,7 +97,7 @@ export default function TabsLayout() {
       screenOptions={{ headerShown: false, animation: "shift" }}
     >
       <Tabs.Screen name="dashboard" />
-      <Tabs.Screen name="index" />
+      <Tabs.Screen name="jornada" />
       <Tabs.Screen name="ranking" />
       <Tabs.Screen name="history" />
       <Tabs.Screen name="profile" />

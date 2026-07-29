@@ -27,13 +27,17 @@ app/
   index.tsx            # redirige según sesión (hidrata SecureStore)
   login.tsx            # login → guarda token (exige Player vinculado)
   (tabs)/
-    _layout.tsx        # tabs: Jornada · Ranking · Historial · Perfil
-    index.tsx          # próxima jornada + confirmar disponibilidad
-    ranking.tsx        # ranking por liga + posición
+    _layout.tsx        # tabs: Inicio · Jornada · Ranking · Historial · Perfil
+    dashboard.tsx      # inicio: resumen, ligas inscritas, torneos abiertos
+    jornada.tsx        # próxima jornada + confirmar disponibilidad (?round_id= la fija)
+    ranking.tsx        # ranking por liga + posición (?league_id= resalta una)
     history.tsx        # historial de resultados
     profile.tsx        # perfil + cerrar sesión
+  disputes.tsx         # impugnaciones por votar (?dispute_id= resalta una)
 src/
   lib/api.ts           # cliente fetch (Token DRF), endpoints /api/v2/me/*
+  lib/push.ts          # registro/baja del Expo push token
+  lib/notifications.ts # a qué pantalla lleva cada push al tocarlo
   store/auth.ts        # zustand + persist en SecureStore
   hooks.ts             # react-query: useNextRound, useRankings, useHistory...
   components/ui.tsx     # Button, Card, Pill, H1 (StyleSheet)

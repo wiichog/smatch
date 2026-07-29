@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
+import { enterAppAfterLogin } from "@/lib/notifications";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, fonts, radius, spacing } from "@/theme";
 
@@ -53,7 +54,9 @@ export default function Login() {
         name: data.user.name ?? "",
         avatar_url: data.user.avatar_url ?? null,
       });
-      router.replace("/(tabs)");
+      // Si la app la abrió un push sin sesión, entra directo a su destino. Una sola
+      // navegación: dos hacia `(tabs)` en el mismo tick duplican el navegador.
+      enterAppAfterLogin();
     } catch (e: any) {
       setError(e?.message ?? "No se pudo iniciar sesión.");
     } finally {

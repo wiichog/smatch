@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -26,7 +27,11 @@ import { useAuth } from "@/store/auth";
 import { colors, radius, spacing } from "@/theme";
 
 export default function JornadaScreen() {
-  const { data, isLoading, refetch, isRefetching } = useNextRound();
+  // `round_id` llega cuando la pantalla la abrió un push (jornada publicada /
+  // recordatorio): entonces mostramos ESA jornada, no la que el servidor crea próxima.
+  const { round_id } = useLocalSearchParams<{ round_id?: string }>();
+  const roundId = Number(round_id) > 0 ? Number(round_id) : undefined;
+  const { data, isLoading, refetch, isRefetching } = useNextRound(roundId);
   const availMut = useSetAvailability();
   const round = data?.next_round;
   const me = useAuth((s) => s.user?.name) ?? "";
@@ -107,25 +112,32 @@ export default function JornadaScreen() {
               )
             )}
 
-            <SectionHeader index={2} title="¿Vas a jugar?" style={styles.section} />
-            <View style={{ flexDirection: "row", gap: spacing.sm }}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title={round.availability === "available" ? "✓ Voy" : "Voy"}
-                  variant={round.availability === "available" ? "primary" : "glass"}
-                  loading={availMut.isPending}
-                  onPress={() => availMut.mutate({ round: round.round_id, status: "available" })}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title={round.availability === "unavailable" ? "✓ No voy" : "No voy"}
-                  variant={round.availability === "unavailable" ? "ink" : "glass"}
-                  loading={availMut.isPending}
-                  onPress={() => availMut.mutate({ round: round.round_id, status: "unavailable" })}
-                />
-              </View>
-            </View>
+            {/* Solo mientras la jornada siga viva: un deep link del push de cierre abre
+                una jornada CLOSED, y ahí "No voy" mandaría un correo al club por un
+                partido ya jugado. */}
+            {round.status === "published" && (
+              <>
+                <SectionHeader index={2} title="¿Vas a jugar?" style={styles.section} />
+                <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title={round.availability === "available" ? "✓ Voy" : "Voy"}
+                      variant={round.availability === "available" ? "primary" : "glass"}
+                      loading={availMut.isPending}
+                      onPress={() => availMut.mutate({ round: round.round_id, status: "available" })}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title={round.availability === "unavailable" ? "✓ No voy" : "No voy"}
+                      variant={round.availability === "unavailable" ? "ink" : "glass"}
+                      loading={availMut.isPending}
+                      onPress={() => availMut.mutate({ round: round.round_id, status: "unavailable" })}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
 
             <FeedbackSection roundId={round.round_id} />
           </>

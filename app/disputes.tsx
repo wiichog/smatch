@@ -3,7 +3,7 @@
  * jugador; aprueba/rechaza. Si todos aprueban, el backend corrige el marcador.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -16,6 +16,9 @@ import { colors, spacing } from "@/theme";
 
 export default function DisputesScreen() {
   const router = useRouter();
+  // `dispute_id` llega del push: resalta cuál de las abiertas es la que te avisaron.
+  const { dispute_id } = useLocalSearchParams<{ dispute_id?: string }>();
+  const highlighted = Number(dispute_id) > 0 ? Number(dispute_id) : null;
   const token = useAuth((s) => s.token);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +69,15 @@ export default function DisputesScreen() {
           </GlassCard>
         ) : (
           disputes.map((d) => (
-            <GlassCard key={d.id} style={{ gap: spacing.sm, marginBottom: spacing.md }}>
+            <GlassCard
+              key={d.id}
+              strong={d.id === highlighted}
+              style={{
+                gap: spacing.sm,
+                marginBottom: spacing.md,
+                ...(d.id === highlighted ? styles.highlighted : null),
+              }}
+            >
               <Label>
                 {d.league} · Jornada {d.round_number}
               </Label>
@@ -109,6 +120,8 @@ export default function DisputesScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
+  // La impugnación que traía el push: borde lima, el acento de la marca.
+  highlighted: { borderColor: colors.primary, borderWidth: 1 },
   scores: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   scoreText: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 2 },
 });

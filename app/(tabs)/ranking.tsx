@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { GlassCard } from "@/components/Glass";
@@ -10,6 +11,10 @@ import { alpha, colors, fonts, radius, spacing } from "@/theme";
 
 export default function RankingScreen() {
   const { data, isLoading, refetch, isRefetching } = useRankings();
+  // `league_id` llega desde el push de cierre de jornada: resaltamos esa liga para que
+  // se vea de inmediato de cuál hablaba la notificación (el jugador puede tener varias).
+  const { league_id } = useLocalSearchParams<{ league_id?: string }>();
+  const highlighted = Number(league_id) > 0 ? Number(league_id) : null;
   const rankings = data?.rankings ?? [];
 
   return (
@@ -36,7 +41,7 @@ export default function RankingScreen() {
               return (
                 <View key={r.league_id}>
                   {i > 0 && <View style={styles.hairline} />}
-                  <View style={styles.row}>
+                  <View style={[styles.row, r.league_id === highlighted && styles.rowHighlight]}>
                     <View style={[styles.posBadge, top && styles.posBadgeTop]}>
                       <Text style={[styles.posBadgeText, top && { color: colors.onPrimary }]}>#{r.position}</Text>
                     </View>
@@ -64,6 +69,14 @@ const styles = StyleSheet.create({
   emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
   hairline: { height: 1, backgroundColor: colors.glassBorder, marginBottom: spacing.md },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  // Liga a la que apuntaba el push: pastilla lima tenue, el mismo acento del tab activo.
+  rowHighlight: {
+    backgroundColor: alpha(colors.primary, 0.1),
+    borderRadius: radius.md,
+    marginHorizontal: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
   posBadge: {
     width: 44,
     height: 44,
