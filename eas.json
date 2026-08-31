@@ -15,7 +15,7 @@
       "distribution": "internal",
       "ios": { "simulator": false },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://smatchapi.devpackgroup.com"
+        "EXPO_PUBLIC_API_URL": "https://api.smatchapp.mx"
       }
     },
     "production": {
@@ -23,7 +23,7 @@
       "distribution": "store",
       "node": "22.20.0",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://smatchapi.devpackgroup.com"
+        "EXPO_PUBLIC_API_URL": "https://api.smatchapp.mx"
       },
       "ios": {
         "image": "macos-tahoe-26.4-xcode-26.4"

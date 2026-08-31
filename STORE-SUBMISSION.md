@@ -44,7 +44,7 @@ consola de Apple/Google) está marcado ⚠️.
 - ⚠️ Si una app vieja ya ocupa el nombre "Smatch", renómbrala para liberarlo.
 
 ## 6) Política de privacidad (obligatoria en ambas tiendas)
-- ✅ Página pública y viva: **https://smatch.devpackgroup.com/privacidad**
+- ✅ Página pública y viva: **https://www.smatchapp.mx/privacidad**
   (y términos en `/terminos`). Son rutas Next.js reales (no SPA estática), así que se
   sirven directo en Amplify sin depender de reglas 404-rewrite.
 - ⚠️ Tras desplegar el web, **abre la URL** y confirma que carga la política (no la home).
@@ -58,7 +58,7 @@ consola de Apple/Google) está marcado ⚠️.
   - **Usuario:** `revisor@smatch-demo.app`
   - **Contraseña:** `SmatchReview!2026`
 - ✅ Verificado: el login funciona y el revisor ve su próxima jornada (Liga Demo).
-- ⚠️ Confirma que el login funciona **contra prod** (`smatchapi.devpackgroup.com`) tras
+- ⚠️ Confirma que el login funciona **contra prod** (`api.smatchapp.mx`) tras
   correr `seed_demo` ahí.
 
 ## 8) Pagos fuera de Apple IAP — preempte el rechazo
@@ -110,6 +110,6 @@ python manage.py seed_demo
 ```
 
 ## URL del backend en el build
-`eas.json` fija `EXPO_PUBLIC_API_URL` por perfil (production → `https://smatchapi.devpackgroup.com`).
+`eas.json` fija `EXPO_PUBLIC_API_URL` por perfil (production → `https://api.smatchapp.mx`).
 La app la lee con prioridad sobre `extra.apiUrl`. Así el build de tienda pega a prod y el
 login demo del revisor funciona.
