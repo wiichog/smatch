@@ -3,18 +3,49 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { useBugReport } from "@/components/BugReport";
 import { GlassCard, GlassPressable } from "@/components/Glass";
 import { Screen } from "@/components/Screen";
-import { Button, Muted } from "@/components/ui";
+import { Button, Label, Muted } from "@/components/ui";
 import { api } from "@/lib/api";
 import { clearPendingRoute } from "@/lib/notifications";
 import { unregisterDevice } from "@/lib/push";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, radius, spacing } from "@/theme";
+
+/**
+ * Páginas legales y de soporte, que viven en el web. Apple exige que la política de
+ * privacidad y la solicitud de borrado de cuenta se alcancen DESDE DENTRO de la app
+ * (Guideline 5.1.1), no solo desde la ficha de la tienda.
+ */
+const LEGAL_LINKS: {
+  title: string;
+  hint: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  url: string;
+}[] = [
+  {
+    title: "Política de privacidad",
+    hint: "Qué datos guardamos y para qué los usamos.",
+    icon: "shield-checkmark",
+    url: "https://www.smatchapp.mx/privacidad",
+  },
+  {
+    title: "Soporte",
+    hint: "¿Necesitas ayuda? Escríbenos.",
+    icon: "help-buoy",
+    url: "https://www.smatchapp.mx/soporte",
+  },
+  {
+    title: "Eliminar mi cuenta",
+    hint: "Solicita borrar tu cuenta y tus datos.",
+    icon: "trash",
+    url: "https://www.smatchapp.mx/eliminar-cuenta",
+  },
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -143,6 +174,34 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
         </GlassPressable>
 
+        {/* Ayuda y legal — abren el web en el navegador del sistema */}
+        <View style={styles.legalHead}>
+          <Label>Ayuda y legal</Label>
+        </View>
+        {LEGAL_LINKS.map((link) => (
+          <GlassPressable
+            key={link.url}
+            onPress={() => {
+              // Best-effort: si el teléfono no puede abrir el navegador, no rompemos la
+              // pantalla de perfil por un enlace.
+              Linking.openURL(link.url).catch(() => {});
+            }}
+            style={styles.legalRow}
+            // El `open-outline` avisa en pantalla que la fila sale de la app; con lector
+            // de pantalla el icono no se anuncia, así que va en el label.
+            accessibilityLabel={`${link.title}. Se abre en el navegador.`}
+          >
+            <View style={styles.reportIcon}>
+              <Ionicons name={link.icon} size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.reportTitle}>{link.title}</Text>
+              <Muted>{link.hint}</Muted>
+            </View>
+            <Ionicons name="open-outline" size={16} color={colors.textFaint} />
+          </GlassPressable>
+        ))}
+
         <View style={{ marginTop: spacing.xl }}>
           <Button
             title="Cerrar sesión"
@@ -198,6 +257,15 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, marginTop: spacing.xs, textAlign: "center" },
   reportRow: {
     marginTop: spacing.xl,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  // El grupo legal va más apretado que las filas de acción: son enlaces de referencia,
+  // no destinos principales del perfil.
+  legalHead: { marginTop: spacing.xl, marginBottom: spacing.xs, paddingHorizontal: spacing.xs },
+  legalRow: {
+    marginTop: spacing.sm,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,

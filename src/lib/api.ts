@@ -5,12 +5,19 @@
  */
 import Constants from "expo-constants";
 
-// En builds de EAS, EXPO_PUBLIC_API_URL (perfil production → prod) tiene prioridad.
-// En dev cae al extra.apiUrl de app.json (localhost).
+// Orden: EXPO_PUBLIC_API_URL (la inyecta cada perfil de eas.json) → localhost SOLO en
+// desarrollo → extra.apiUrl de app.json (prod) → prod.
+// `||` y NO `??`: una cadena vacía no es nullish, así que una variable definida-pero-
+// vacía se colaba y dejaba la app pegando a la nada (mismo bug que tuvimos en el web).
+// El `__DEV__` va ANTES de extra.apiUrl porque `expo start` contra el backend local no
+// trae env var: sin esta rama la app de desarrollo escribiría en PRODUCCIÓN.
+// Y después de __DEV__ ya nada puede ser localhost: un build de tienda atorado en
+// http://localhost:8000 lo bloquea ATS en iOS sin error claro.
 const BASE_URL: string =
-  process.env.EXPO_PUBLIC_API_URL ??
-  (Constants.expoConfig?.extra?.apiUrl as string) ??
-  "http://localhost:8000";
+  process.env.EXPO_PUBLIC_API_URL ||
+  (__DEV__ ? "http://localhost:8000" : undefined) ||
+  (Constants.expoConfig?.extra?.apiUrl as string) ||
+  "https://api.smatchapp.mx";
 
 export class ApiError extends Error {
   status: number;

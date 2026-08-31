@@ -2,10 +2,10 @@
   "expo": {
     "name": "Smatch",
     "slug": "smatch",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "scheme": "smatch",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",
     "assetBundlePatterns": [
       "**/*"
@@ -54,16 +54,23 @@
         }
       ],
       "expo-video",
-      "expo-sensors",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Smatch detecta que sacudes el teléfono para abrir el reporte de un problema."
+        }
+      ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Smatch usa tus fotos solo si adjuntas una captura al reportar un problema."
+          "photosPermission": "Smatch abre tus fotos para tu foto de perfil, para la foto de la bitácora de la jornada y para adjuntar una captura al reportar un problema.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ]
     ],
     "extra": {
-      "apiUrl": "http://localhost:8000",
+      "apiUrl": "https://api.smatchapp.mx",
       "router": {
         "origin": false
       },
