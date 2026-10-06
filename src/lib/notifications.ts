@@ -18,6 +18,7 @@ import * as Notifications from "expo-notifications";
 import { router, useRootNavigationState } from "expo-router";
 import { useEffect } from "react";
 
+import { HOME_ROUTE } from "@/lib/routes";
 import { useAuth } from "@/store/auth";
 
 /** `data` de un push. Todo llega como string porque Expo lo serializa así. */
@@ -125,7 +126,7 @@ function navigate(route: PushRoute) {
 /**
  * Entra a la app tras el login, directo al destino del push si lo hubo.
  *
- * UNA sola navegación hacia `(tabs)`: `replace("/(tabs)")` seguido de otra navegación a
+ * UNA sola navegación hacia `(tabs)`: `replace(HOME_ROUTE)` seguido de otra navegación a
  * `(tabs)/…` en el mismo tick se despacha en el mismo lote, y al convertir la segunda la
  * ruta recién creada aún no tiene estado anidado → diverge en el stack RAÍZ y duplica el
  * navegador de pestañas.
@@ -138,7 +139,7 @@ export function enterAppAfterLogin() {
     navigate(route);
     return;
   }
-  router.replace("/(tabs)");
+  router.replace(HOME_ROUTE);
   // Fuera de las pestañas (p. ej. `/disputes`) sí son dos rutas distintas: la segunda
   // diverge por nombre y apila la pantalla correcta, con vuelta atrás a la app.
   if (route) navigate(route);

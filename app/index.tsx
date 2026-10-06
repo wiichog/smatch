@@ -1,6 +1,7 @@
 import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
+import { HOME_ROUTE } from "@/lib/routes";
 import { colors } from "@/theme";
 import { useAuth } from "@/store/auth";
 
@@ -15,5 +16,5 @@ export default function Index() {
       </View>
     );
   }
-  return <Redirect href={token ? "/(tabs)" : "/login"} />;
+  return <Redirect href={token ? HOME_ROUTE : "/login"} />;
 }
