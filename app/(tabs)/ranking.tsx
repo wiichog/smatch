@@ -3,6 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { GlassCard } from "@/components/Glass";
+import { LoadError } from "@/components/LoadError";
 import { Screen } from "@/components/Screen";
 import { Muted } from "@/components/ui";
 import { useRankings } from "@/hooks";
@@ -10,7 +11,7 @@ import type { Ranking } from "@/lib/api";
 import { alpha, colors, fonts, radius, spacing } from "@/theme";
 
 export default function RankingScreen() {
-  const { data, isLoading, refetch, isRefetching } = useRankings();
+  const { data, isLoading, refetch, isRefetching, isError, error } = useRankings();
   // `league_id` llega desde el push de cierre de jornada: resaltamos esa liga para que
   // se vea de inmediato de cuál hablaba la notificación (el jugador puede tener varias).
   const { league_id } = useLocalSearchParams<{ league_id?: string }>();
@@ -28,6 +29,8 @@ export default function RankingScreen() {
       >
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
+        ) : isError && !data ? (
+          <LoadError error={error} onRetry={() => void refetch()} style={{ marginTop: spacing.md }} />
         ) : rankings.length === 0 ? (
           <GlassCard style={{ marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.xl, gap: 8 }}>
             <Ionicons name="trophy-outline" size={38} color={colors.textMuted} />
@@ -47,7 +50,7 @@ export default function RankingScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.league} numberOfLines={1}>{r.league_name}</Text>
-                      {r.current_court_number != null && <Muted>Cancha {r.current_court_number}</Muted>}
+                      {r.current_court_number != null && <Muted>Pista {r.current_court_number}</Muted>}
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
                       <Text style={styles.points}>{r.points}</Text>

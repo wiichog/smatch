@@ -4,8 +4,8 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useRef, useState } from "react";
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { GlassCard } from "@/components/Glass";
 import { Screen } from "@/components/Screen";
@@ -37,9 +37,11 @@ export default function DisputeScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const team2Ref = useRef<TextInput>(null);
 
   async function submit() {
     if (!token || t1 === "" || t2 === "") return;
+    Keyboard.dismiss();
     setSending(true);
     setError(null);
     try {
@@ -61,7 +63,10 @@ export default function DisputeScreen() {
         </Pressable>
       }
     >
-      <View style={styles.content}>
+      {/* Tocar fuera de los marcadores cierra el teclado: el numérico de iOS no trae
+          tecla para cerrarse, y una barra «Listo» encima (InputAccessoryView) no se pega
+          al teclado con la arquitectura nueva de RN 0.85 — salía suelta al fondo. */}
+      <Pressable style={[styles.content, { flex: 1 }]} onPress={Keyboard.dismiss} accessible={false}>
         {done ? (
           <GlassCard strong style={{ alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl }}>
             <Ionicons name="checkmark-circle" size={48} color={colors.highlight} />
@@ -84,7 +89,12 @@ export default function DisputeScreen() {
                 <TextInput
                   style={styles.score}
                   value={t1}
-                  onChangeText={(v) => setT1((prev) => limitGames(v, prev))}
+                  onChangeText={(v) => {
+                    const next = limitGames(v, t1);
+                    setT1(next);
+                    // Un dígito y listo: salta solo al marcador del otro equipo.
+                    if (next !== "") team2Ref.current?.focus();
+                  }}
                   keyboardType="number-pad"
                   maxLength={1}
                   placeholder="0"
@@ -95,9 +105,16 @@ export default function DisputeScreen() {
               <View style={{ flex: 1 }}>
                 <Label>Equipo 2</Label>
                 <TextInput
+                  ref={team2Ref}
                   style={styles.score}
                   value={t2}
-                  onChangeText={(v) => setT2((prev) => limitGames(v, prev))}
+                  onChangeText={(v) => {
+                    const next = limitGames(v, t2);
+                    setT2(next);
+                    // Con los dos marcadores puestos ya no hay nada que teclear: el teclado
+                    // se va y deja ver «Enviar impugnación».
+                    if (next !== "" && t1 !== "") Keyboard.dismiss();
+                  }}
                   keyboardType="number-pad"
                   maxLength={1}
                   placeholder="0"
@@ -109,7 +126,7 @@ export default function DisputeScreen() {
             <Button title="Enviar impugnación" onPress={submit} loading={sending} disabled={t1 === "" || t2 === ""} />
           </>
         )}
-      </View>
+      </Pressable>
     </Screen>
   );
 }

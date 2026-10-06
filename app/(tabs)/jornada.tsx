@@ -14,15 +14,19 @@ import {
   View,
 } from "react-native";
 
+import { AvailabilityPicker } from "@/components/Availability";
 import { Avatar } from "@/components/Avatar";
 import { CourtBackdrop } from "@/components/CourtBackdrop";
 import { GlassCard } from "@/components/Glass";
+import { LoadError } from "@/components/LoadError";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Screen } from "@/components/Screen";
 import { SponsorBanner } from "@/components/SponsorBanner";
+import { useToast } from "@/components/Toast";
 import { Button, Chip, Label, Muted, Pill } from "@/components/ui";
-import { useNextRound, useSetAvailability } from "@/hooks";
+import { useNextRound } from "@/hooks";
 import { api, type PersonBrief } from "@/lib/api";
+import { roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
 import { colors, radius, spacing } from "@/theme";
 
@@ -31,11 +35,16 @@ export default function JornadaScreen() {
   // recordatorio): entonces mostramos ESA jornada, no la que el servidor crea próxima.
   const { round_id } = useLocalSearchParams<{ round_id?: string }>();
   const roundId = Number(round_id) > 0 ? Number(round_id) : undefined;
-  const { data, isLoading, refetch, isRefetching } = useNextRound(roundId);
-  const availMut = useSetAvailability();
+  const { data, isLoading, refetch, isRefetching, isError, error } = useNextRound(roundId);
   const round = data?.next_round;
   const me = useAuth((s) => s.user?.name) ?? "";
   const isMe = (name?: string | null) => !!me && !!name && name.trim() === me.trim();
+  // Cuándo y dónde: lo PRIMERO que necesita quien va a jugar, y no aparecía en ningún lado.
+  const when = roundWhen(round?.scheduled_at, round?.time_slot);
+  const whenText = [when.day, when.time].filter(Boolean).join(" · ");
+  const published = round?.status === "published";
+  // Numeración 01/02/03 seguida aunque «¿Vas a jugar?» no aparezca (jornada cerrada).
+  const matchesIndex = published ? 2 : 1;
 
   return (
     <Screen title="Jornada" subtitle={round?.league ?? "Tu próxima jornada"}>
@@ -55,6 +64,8 @@ export default function JornadaScreen() {
 
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
+        ) : isError && !data ? (
+          <LoadError error={error} onRetry={() => void refetch()} style={{ marginTop: spacing.lg }} />
         ) : !round ? (
           <GlassCard style={styles.emptyCard}>
             {/* Motivo de cancha nocturna: llena el vacío sin robarle protagonismo al mensaje */}
@@ -67,18 +78,37 @@ export default function JornadaScreen() {
           </GlassCard>
         ) : (
           <>
-            {/* Hero: tu cancha */}
+            {/* Hero: tu pista, y cuándo y dónde se juega */}
             <GlassCard strong style={{ marginTop: spacing.sm, alignItems: "center", gap: spacing.sm }}>
               <View style={styles.rowBetweenFull}>
-                <Label>Tu cancha</Label>
-                <Pill label={`Jornada ${round.round_number}`} tone="primary" />
+                <Label>Tu pista</Label>
+                <Pill
+                  label={round.status === "closed" ? `Jornada ${round.round_number} · cerrada` : `Jornada ${round.round_number}`}
+                  tone={round.status === "closed" ? "neutral" : "primary"}
+                />
               </View>
               <Text style={styles.courtNumber}>{round.court_number}</Text>
               <Chip label={`Posición ${round.position}`} color={colors.highlight} />
+              {(!!whenText || !!round.physical_court_number) && (
+                <View style={styles.whereBox}>
+                  {!!whenText && (
+                    <View style={styles.whereRow}>
+                      <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                      <Text style={styles.whereText}>{whenText}</Text>
+                    </View>
+                  )}
+                  {!!round.physical_court_number && (
+                    <View style={styles.whereRow}>
+                      <Ionicons name="location-outline" size={18} color={colors.primary} />
+                      <Text style={styles.whereText}>Cancha {round.physical_court_number} del club</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               {(round.courtmates?.length ?? 0) > 0 && (
                 <View style={styles.matesBox}>
-                  <Label>Compañeros de cancha</Label>
+                  <Label>Compañeros de pista</Label>
                   <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
                     {(round.courtmates ?? []).map(
                       (c: { name: string; position: string; avatar_url: string | null }) => (
@@ -96,7 +126,23 @@ export default function JornadaScreen() {
               )}
             </GlassCard>
 
-            <SectionHeader index={1} title="Partidos" count={round.matches?.length ?? 0} style={styles.section} />
+            {/* Solo mientras la jornada siga viva: un deep link del push de cierre abre
+                una jornada CLOSED, y ahí "No voy" mandaría un correo al club por un
+                partido ya jugado. Va ARRIBA de los partidos: es lo que el club necesita
+                del jugador, y al fondo de la pantalla nadie llegaba a verlo. */}
+            {published && (
+              <>
+                <SectionHeader index={1} title="¿Vas a jugar?" style={styles.section} />
+                <AvailabilityPicker roundId={round.round_id} availability={round.availability} />
+              </>
+            )}
+
+            <SectionHeader
+              index={matchesIndex}
+              title="Partidos"
+              count={round.matches?.length ?? 0}
+              style={styles.section}
+            />
             {(round.matches ?? []).map(
               (m: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }) => (
                 <GlassCard key={m.match_number} style={{ marginBottom: spacing.md, gap: spacing.sm }}>
@@ -112,34 +158,7 @@ export default function JornadaScreen() {
               )
             )}
 
-            {/* Solo mientras la jornada siga viva: un deep link del push de cierre abre
-                una jornada CLOSED, y ahí "No voy" mandaría un correo al club por un
-                partido ya jugado. */}
-            {round.status === "published" && (
-              <>
-                <SectionHeader index={2} title="¿Vas a jugar?" style={styles.section} />
-                <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      title={round.availability === "available" ? "✓ Voy" : "Voy"}
-                      variant={round.availability === "available" ? "primary" : "glass"}
-                      loading={availMut.isPending}
-                      onPress={() => availMut.mutate({ round: round.round_id, status: "available" })}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      title={round.availability === "unavailable" ? "✓ No voy" : "No voy"}
-                      variant={round.availability === "unavailable" ? "ink" : "glass"}
-                      loading={availMut.isPending}
-                      onPress={() => availMut.mutate({ round: round.round_id, status: "unavailable" })}
-                    />
-                  </View>
-                </View>
-              </>
-            )}
-
-            <FeedbackSection roundId={round.round_id} />
+            <FeedbackSection roundId={round.round_id} index={matchesIndex + 1} />
           </>
         )}
       </ScrollView>
@@ -181,8 +200,9 @@ function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n?: string 
 }
 
 /** Bitácora de la jornada (ticket #31): comentario, experiencia y foto del propio jugador. */
-function FeedbackSection({ roundId }: { roundId: number }) {
+function FeedbackSection({ roundId, index }: { roundId: number; index: number }) {
   const token = useAuth((s) => s.token);
+  const toast = useToast();
   const [comment, setComment] = useState("");
   const [experience, setExperience] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -223,6 +243,7 @@ function FeedbackSection({ roundId }: { roundId: number }) {
       setSavedUrl(fb?.photo_url ?? savedUrl);
       setPhotoUri(null);
       setDone(true);
+      toast.show("Bitácora guardada.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -234,7 +255,7 @@ function FeedbackSection({ roundId }: { roundId: number }) {
 
   return (
     <>
-      <SectionHeader index={3} title="Tu bitácora" style={styles.section} />
+      <SectionHeader index={index} title="Tu bitácora" style={styles.section} />
       <GlassCard style={{ gap: spacing.sm }}>
         <Label>Comentario</Label>
         <TextInput
@@ -298,6 +319,16 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   courtNumber: { color: colors.primary, fontSize: 68, fontWeight: "800", lineHeight: 74 },
+  whereBox: {
+    alignSelf: "stretch",
+    gap: 6,
+    marginTop: spacing.xs,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  whereRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  whereText: { color: colors.text, fontSize: 16, fontWeight: "700" },
   matesBox: {
     alignSelf: "stretch",
     marginTop: spacing.sm,

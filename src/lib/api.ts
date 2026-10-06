@@ -27,6 +27,22 @@ export class ApiError extends Error {
   }
 }
 
+/** Mensaje cuando la petición ni siquiera llega al servidor (sin red, servidor caído). */
+export const OFFLINE_MESSAGE = "No pudimos conectar con Smatch. Revisa tu internet e intenta de nuevo.";
+
+/**
+ * `fetch` que, si la red falla, lanza un `ApiError` en español. Sin esto el jugador veía
+ * el error crudo del motor («Network request failed») justo en el login, que es la
+ * primera pantalla de la app.
+ */
+async function fetchOrExplain(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new ApiError(OFFLINE_MESSAGE, 0);
+  }
+}
+
 async function request<T>(
   path: string,
   opts: { method?: string; body?: unknown; token?: string | null } = {}
@@ -35,7 +51,7 @@ async function request<T>(
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Token ${token}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetchOrExplain(`${BASE_URL}${path}`, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -71,6 +87,10 @@ export interface NextRound {
     round_number: number;
     scheduled_at: string | null;
     court_number: number;
+    // Tanda («20:30») y cancha física de ESTA pista. Opcionales: un backend anterior no
+    // los manda, y el club puede no haber planeado horarios (null).
+    time_slot?: string | null;
+    physical_court_number?: number | null;
     position: string;
     courtmates: { name: string; position: string; avatar_url: string | null }[];
     matches: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }[];
@@ -114,6 +134,10 @@ export interface DashboardData {
     id: number;
     name: string;
     format: string;
+    // «draft» = el club lo está armando; «active» = ya se juega. Opcionales por la
+    // misma razón que arriba (backend viejo).
+    status?: "draft" | "active" | "finished";
+    starts_on?: string | null;
     logo_url?: string | null;
     background_image_url?: string | null;
   }[];
@@ -125,6 +149,34 @@ export interface DashboardData {
     logo_url?: string | null;
     background_image_url?: string | null;
   }[];
+}
+
+// --- Renta de canchas ---
+export interface FreeSlot {
+  start_time: string; // "HH:MM:SS"
+  end_time: string;
+  /** Precio de ESA franja (con la tarifa del club). Opcional: backend viejo no lo manda. */
+  price?: string;
+}
+
+export interface MyReservation {
+  id: number;
+  club: string;
+  court_name: string;
+  date: string; // "YYYY-MM-DD", hora del club
+  start_time: string;
+  end_time: string;
+  status: "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
+  status_display: string;
+  payment_status: "pending" | "partial" | "paid" | "refunded";
+  total_amount: string;
+  my_share: string | null;
+  my_pay_method: "online" | "venue" | null;
+  my_pay_status: "pending" | "paid" | null;
+  booked_by_me: boolean;
+  participants: { name: string; is_me: boolean }[];
+  can_cancel: boolean;
+  cancel_blocked_reason: string | null;
 }
 
 /**
@@ -192,7 +244,7 @@ export const api = {
   // --- Renta de canchas (ticket #30) ---
   rentalCourts: (token: string) => request<{ courts: any[] }>("/api/v2/rentals/courts/", { token }),
   courtFreeSlots: (token: string, courtId: number, date: string) =>
-    request<{ date: string; slots: { start_time: string; end_time: string }[] }>(
+    request<{ date: string; slots: FreeSlot[] }>(
       `/api/v2/rentals/courts/${courtId}/free-slots/?date=${date}`,
       { token }
     ),
@@ -203,11 +255,23 @@ export const api = {
       date: string;
       start_time: string;
       end_time: string;
-      pay_method?: string;
+      pay_method?: "online" | "venue";
       pay_now?: boolean;
-      participants?: { invited_name?: string; invited_phone?: string; player?: number }[];
+      participants?: {
+        invited_name?: string;
+        invited_phone?: string;
+        player?: number;
+        pay_method?: "online" | "venue";
+      }[];
     }
   ) => request<any>("/api/v2/rentals/reservations/", { method: "POST", token, body }),
+  myReservations: (token: string) =>
+    request<{ upcoming: MyReservation[]; past: MyReservation[] }>("/api/v2/me/reservations/", { token }),
+  cancelReservation: (token: string, reservationId: number) =>
+    request<MyReservation>(`/api/v2/rentals/reservations/${reservationId}/cancel/`, {
+      method: "POST",
+      token,
+    }),
 
   // --- Impugnación de marcador (ticket #32) ---
   raiseDispute: (token: string, matchId: number, team1: number, team2: number) =>
@@ -241,7 +305,7 @@ export const api = {
       const name = photoUri.split("/").pop() || "foto.jpg";
       const ext = name.split(".").pop()?.toLowerCase() || "jpg";
       fd.append("photo", { uri: photoUri, name, type: `image/${ext === "jpg" ? "jpeg" : ext}` } as any);
-      const res = await fetch(`${BASE_URL}${path}`, {
+      const res = await fetchOrExplain(`${BASE_URL}${path}`, {
         method: "POST",
         headers: { Authorization: `Token ${token}` },
         body: fd,
@@ -291,7 +355,7 @@ export const api = {
       // name/type robustos: usa el fileName/mimeType del asset; si faltan, jpg/jpeg.
       const part = resolvePhotoPart(photoUri, photoMeta);
       fd.append("photo", { uri: photoUri, name: part.name, type: part.type } as any);
-      const res = await fetch(`${BASE_URL}/api/v2/me/profile/`, {
+      const res = await fetchOrExplain(`${BASE_URL}/api/v2/me/profile/`, {
         method: "PATCH",
         headers: { Authorization: `Token ${token}` },
         body: fd,
@@ -328,7 +392,7 @@ export const api = {
         name,
         type: `image/${ext === "jpg" ? "jpeg" : ext}`,
       } as any);
-      const res = await fetch(`${BASE_URL}/api/v2/me/report/`, {
+      const res = await fetchOrExplain(`${BASE_URL}/api/v2/me/report/`, {
         method: "POST",
         headers: { Authorization: `Token ${token}` },
         body: fd,

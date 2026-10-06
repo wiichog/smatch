@@ -14,6 +14,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppErrorFallback } from "@/components/AppErrorFallback";
 import { BugReportProvider } from "@/components/BugReport";
+import { ToastProvider } from "@/components/Toast";
 import { useNotificationRouting } from "@/lib/notifications";
 
 /** Red de seguridad global: cualquier throw en render de una pantalla cae aquí en vez de
@@ -52,14 +53,17 @@ export default function RootLayout() {
     <QueryClientProvider client={client}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        {/* Reporter global: shake-to-report + acceso desde Perfil, en toda la app. */}
-        <BugReportProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="login" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-        </BugReportProvider>
+        {/* Avisos breves («Guardado») encima de todo, incluso de las pantallas apiladas. */}
+        <ToastProvider>
+          {/* Reporter global: shake-to-report + acceso desde Perfil, en toda la app. */}
+          <BugReportProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="login" />
+              <Stack.Screen name="(tabs)" />
+            </Stack>
+          </BugReportProvider>
+        </ToastProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );

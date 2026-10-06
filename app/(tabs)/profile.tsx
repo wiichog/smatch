@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { useBugReport } from "@/components/BugReport";
@@ -109,7 +109,8 @@ export default function ProfileScreen() {
             </View>
           </Pressable>
           <Text style={styles.name}>{user?.name}</Text>
-          <Muted>{user?.email}</Muted>
+          {/* Si la sesión no trae nombre, `name` ES el correo: no se repite debajo. */}
+          {!!user?.email && user.email !== user?.name && <Muted>{user.email}</Muted>}
           <Muted style={{ fontSize: 12 }}>Toca tu foto para cambiarla</Muted>
           {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
         </GlassCard>
@@ -142,6 +143,22 @@ export default function ProfileScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.reportTitle}>Reservar cancha</Text>
             <Muted>Aparta una cancha y divide el costo con tus amigos.</Muted>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </GlassPressable>
+
+        {/* Mis reservas: lo apartado, cuánto toca pagar y cancelar */}
+        <GlassPressable
+          onPress={() => router.push("/reservas")}
+          style={styles.reportRow}
+          accessibilityLabel="Mis reservas"
+        >
+          <View style={styles.reportIcon}>
+            <Ionicons name="calendar" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportTitle}>Mis reservas</Text>
+            <Muted>Tus canchas apartadas, lo que pagas y cancelar.</Muted>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
         </GlassPressable>
@@ -206,19 +223,30 @@ export default function ProfileScreen() {
           <Button
             title="Cerrar sesión"
             variant="glass"
-            onPress={async () => {
-              // Suelta el dispositivo ANTES de tirar el token: si no, este teléfono
-              // sigue recibiendo los push del jugador que acaba de salir.
-              await unregisterDevice(token);
-              signOut();
-              // El destino de un push pendiente era de quien acaba de salir: no puede
-              // replayearse cuando entre otra persona en este teléfono.
-              clearPendingRoute();
-              // Y borra la caché: las queryKeys no llevan el id del jugador, así que
-              // el siguiente en entrar vería la jornada y el ranking del anterior.
-              queryClient.clear();
-              router.replace("/login");
-            }}
+            onPress={() =>
+              // Confirmación: el botón queda al final del scroll, donde un toque de más
+              // al deslizar te sacaba de la app sin preguntar.
+              Alert.alert("¿Cerrar sesión?", "Dejarás de recibir avisos de tu jornada en este teléfono.", [
+                { text: "Cancelar", style: "cancel" },
+                {
+                  text: "Cerrar sesión",
+                  style: "destructive",
+                  onPress: async () => {
+                    // Suelta el dispositivo ANTES de tirar el token: si no, este teléfono
+                    // sigue recibiendo los push del jugador que acaba de salir.
+                    await unregisterDevice(token);
+                    signOut();
+                    // El destino de un push pendiente era de quien acaba de salir: no puede
+                    // replayearse cuando entre otra persona en este teléfono.
+                    clearPendingRoute();
+                    // Y borra la caché: las queryKeys no llevan el id del jugador, así que
+                    // el siguiente en entrar vería la jornada y el ranking del anterior.
+                    queryClient.clear();
+                    router.replace("/login");
+                  },
+                },
+              ])
+            }
           />
         </View>
       </ScrollView>

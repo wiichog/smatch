@@ -20,6 +20,7 @@ import {
 } from "react-native";
 
 import { Screen } from "@/components/Screen";
+import { useToast } from "@/components/Toast";
 import { Button, Label, Muted } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
@@ -29,13 +30,19 @@ type Field = {
   key: string;
   label: string;
   placeholder?: string;
-  keyboardType?: "default" | "phone-pad" | "email-address" | "number-pad";
+  keyboardType?: "default" | "phone-pad" | "email-address" | "number-pad" | "numbers-and-punctuation";
 };
+
+/** «1978-01-03» (como lo guarda el servidor) → «03/01/1978» (como lo escribe una persona). */
+function isoToDmy(iso?: string | null): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso ?? "";
+}
 
 const FIELDS: Field[] = [
   { key: "phone", label: "Celular / WhatsApp", keyboardType: "phone-pad", placeholder: "+52 55 1234 5678" },
   { key: "email", label: "Correo de contacto", keyboardType: "email-address" },
-  { key: "birth_date", label: "Fecha de nacimiento", placeholder: "AAAA-MM-DD (o dd/mm/aaaa)" },
+  { key: "birth_date", label: "Fecha de nacimiento", placeholder: "dd/mm/aaaa", keyboardType: "numbers-and-punctuation" },
   { key: "address_line", label: "Dirección" },
   { key: "city", label: "Ciudad" },
   { key: "state", label: "Estado" },
@@ -63,7 +70,7 @@ function normalizeBirthDate(raw: string): { value?: string; error?: string } {
     mo = Number(dmy[2]);
     y = Number(dmy[3]);
   } else {
-    return { error: "Usa el formato AAAA-MM-DD." };
+    return { error: "Escribe la fecha como dd/mm/aaaa." };
   }
   const dt = new Date(Date.UTC(y, mo - 1, d));
   const valid =
@@ -86,6 +93,7 @@ export default function ProfileEditScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { token, user, setSession } = useAuth();
+  const toast = useToast();
   const [form, setForm] = useState<Record<string, string>>({});
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoMeta, setPhotoMeta] = useState<{ name?: string | null; type?: string | null } | null>(null);
@@ -102,7 +110,7 @@ export default function ProfileEditScreen() {
         setForm({
           phone: p?.phone ?? "",
           email: p?.email ?? "",
-          birth_date: p?.birth_date ?? "",
+          birth_date: isoToDmy(p?.birth_date),
           address_line: p?.address_line ?? "",
           city: p?.city ?? "",
           state: p?.state ?? "",
@@ -168,6 +176,7 @@ export default function ProfileEditScreen() {
         // Guardamos lo válido (incl. la foto), pero dejamos el error marcado por campo.
         setError("Guardamos tu foto y los campos válidos. Revisa los campos marcados.");
       } else {
+        toast.show("Perfil actualizado.");
         router.back();
       }
     } catch (e) {
@@ -188,13 +197,17 @@ export default function ProfileEditScreen() {
         </Pressable>
       }
     >
+      {/* El ScrollView recorre solo hasta el campo enfocado (`automaticallyAdjustKeyboardInsets`).
+          Con el KeyboardAvoidingView de antes el teclado tapaba el campo que se escribía:
+          medía su propio marco, no el de la pantalla bajo el encabezado. */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "android" ? "height" : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.photoRow}>

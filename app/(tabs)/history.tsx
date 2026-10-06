@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { GlassCard } from "@/components/Glass";
+import { LoadError } from "@/components/LoadError";
 import { Screen } from "@/components/Screen";
 import { Muted } from "@/components/ui";
 import { useHistory } from "@/hooks";
@@ -11,7 +12,7 @@ import { alpha, colors, fonts, spacing } from "@/theme";
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { data, isLoading, refetch, isRefetching } = useHistory();
+  const { data, isLoading, refetch, isRefetching, isError, error } = useHistory();
   const rows = data?.history ?? [];
 
   return (
@@ -25,6 +26,8 @@ export default function HistoryScreen() {
       >
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
+        ) : isError && !data ? (
+          <LoadError error={error} onRetry={() => void refetch()} style={{ marginTop: spacing.md }} />
         ) : rows.length === 0 ? (
           <GlassCard style={{ marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.xl, gap: 8 }}>
             <Ionicons name="time-outline" size={38} color={colors.textMuted} />
@@ -43,7 +46,7 @@ export default function HistoryScreen() {
                     <View style={[styles.tick, { backgroundColor: tone }]} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.title}>
-                        Jornada {row.round_number} · Cancha {row.court_number}
+                        Jornada {row.round_number} · Pista {row.court_number}
                       </Text>
                       <Muted>Partido {row.match_number}</Muted>
                     </View>

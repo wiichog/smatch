@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppErrorFallback } from "@/components/AppErrorFallback";
+import { api } from "@/lib/api";
 import { registerDevice } from "@/lib/push";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, radius } from "@/theme";
@@ -87,6 +88,26 @@ export default function TabsLayout() {
   // Registrar el dispositivo para push cuando hay sesión (best-effort).
   useEffect(() => {
     if (token) registerDevice(token);
+  }, [token]);
+
+  // Nombre y foto frescos del jugador. La sesión guardada es una foto del login: las de
+  // antes del arreglo del backend traen el CORREO como nombre («Hola, diego@…»), y una
+  // foto cambiada desde el panel no llegaba hasta volver a entrar. Best-effort: sin red
+  // se queda lo guardado.
+  useEffect(() => {
+    if (!token) return;
+    api
+      .profile(token)
+      .then((p) => {
+        const { user, setSession } = useAuth.getState();
+        if (!user || useAuth.getState().token !== token) return;
+        const name = (p?.full_name ?? "").trim() || user.name;
+        const avatar_url = p?.avatar_url ?? user.avatar_url ?? null;
+        if (name !== user.name || avatar_url !== user.avatar_url) {
+          setSession(token, { ...user, name, avatar_url });
+        }
+      })
+      .catch(() => {});
   }, [token]);
 
   if (!token) return <Redirect href="/login" />;

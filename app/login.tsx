@@ -45,13 +45,25 @@ export default function Login() {
     try {
       const data = await api.login(email.trim(), password);
       if (!data.user?.players?.length) {
-        setError("Tu cuenta no está vinculada a ningún jugador.");
+        // Staff del club sin jugador vinculado: la app (por ahora) es del jugador. Se le
+        // dice a dónde ir en vez de un «no vinculado» que suena a error de su cuenta.
+        setError(
+          data.user?.memberships?.length
+            ? "Esta app es para jugadores. Para administrar tu club entra a www.smatchapp.mx."
+            : "Tu cuenta no está vinculada a ningún jugador. Pídele a tu club que te invite."
+        );
         return;
       }
+      const email0 = data.user.email ?? "";
+      const sessionName = (data.user.name ?? "").trim();
+      // Un backend anterior manda el correo como nombre del jugador invitado: si es así,
+      // se usa el nombre del jugador vinculado.
+      const name =
+        sessionName && sessionName !== email0 ? sessionName : data.user.players[0]?.full_name ?? sessionName;
       setSession(data.token, {
         id: data.user.id,
-        email: data.user.email,
-        name: data.user.name ?? "",
+        email: email0,
+        name,
         avatar_url: data.user.avatar_url ?? null,
       });
       // Si la app la abrió un push sin sesión, entra directo a su destino. Una sola

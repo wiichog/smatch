@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api, type DashboardData, type HistoryRow, type NextRound, type Ranking } from "@/lib/api";
+import {
+  api,
+  type DashboardData,
+  type HistoryRow,
+  type MyReservation,
+  type NextRound,
+  type Ranking,
+} from "@/lib/api";
 import { useAuth } from "@/store/auth";
 
 export function useDashboard() {
@@ -51,5 +58,24 @@ export function useSetAvailability() {
       api.setAvailability(token!, round, status),
     // Prefijo: invalida tanto la "próxima jornada" como la pedida por id.
     onSuccess: () => qc.invalidateQueries({ queryKey: ["next-round"] }),
+  });
+}
+
+/** Reservas del jugador: próximas (la más cercana primero) y pasadas recientes. */
+export function useMyReservations() {
+  const token = useAuth((s) => s.token);
+  return useQuery<{ upcoming: MyReservation[]; past: MyReservation[] }>({
+    queryKey: ["my-reservations"],
+    queryFn: () => api.myReservations(token!),
+    enabled: !!token,
+  });
+}
+
+export function useCancelReservation() {
+  const token = useAuth((s) => s.token);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reservationId: number) => api.cancelReservation(token!, reservationId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-reservations"] }),
   });
 }
