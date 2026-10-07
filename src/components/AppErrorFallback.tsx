@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { useBugReport } from "@/components/BugReport";
 import { Button } from "@/components/ui";
-import { colors, fonts, spacing } from "@/theme";
+import { colors, fonts, MAX_FONT_SCALE, spacing } from "@/theme";
 
 /**
  * Fallback global cuando una pantalla lanza un error en render. En vez de matar la app
@@ -23,13 +23,13 @@ export function AppErrorFallback({ error, retry }: { error: Error; retry: () => 
       <AuroraBackground />
       <SafeAreaView style={styles.wrap}>
         <Ionicons name="alert-circle-outline" size={56} color={colors.primary} />
-        <Text style={styles.title}>Algo salió mal</Text>
-        <Text style={styles.msg}>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>Algo salió mal</Text>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.msg}>
           Se produjo un error al mostrar esta pantalla. Puedes reintentar; si vuelve a
           pasar, repórtalo y lo revisamos.
         </Text>
         {__DEV__ && !!error?.message && (
-          <Text style={styles.detail} numberOfLines={4}>
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.detail} numberOfLines={4}>
             {error.message}
           </Text>
         )}

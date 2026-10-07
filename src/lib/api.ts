@@ -151,6 +151,29 @@ export interface DashboardData {
   }[];
 }
 
+// --- Impugnaciones ---
+/** Una impugnación de marcador. Los campos de contexto son opcionales: un backend
+ *  anterior solo mandaba liga, jornada y marcadores. */
+export interface DisputeRow {
+  id: number;
+  match_id: number;
+  league: string;
+  round_number: number;
+  current: { team1: number; team2: number } | null;
+  proposed: { team1: number; team2: number };
+  already_voted: boolean;
+  raised_by_me: boolean;
+  status?: "open" | "applied" | "rejected" | "approved";
+  raised_by?: string;
+  court_number?: number;
+  match_number?: number;
+  team_1?: string[];
+  team_2?: string[];
+  votes?: { approved: number; needed: number };
+  round_closed?: boolean;
+  resolved_at?: string | null;
+}
+
 // --- Renta de canchas ---
 export interface FreeSlot {
   start_time: string; // "HH:MM:SS"
@@ -281,7 +304,7 @@ export const api = {
       body: { team1_games: team1, team2_games: team2 },
     }),
   myDisputes: (token: string) =>
-    request<{ disputes: any[] }>("/api/v2/me/disputes/", { token }),
+    request<{ disputes: DisputeRow[]; recent?: DisputeRow[] }>("/api/v2/me/disputes/", { token }),
   voteDispute: (token: string, disputeId: number, approve: boolean) =>
     request<{ id: number; status: string }>(`/api/v2/disputes/${disputeId}/vote/`, {
       method: "POST",

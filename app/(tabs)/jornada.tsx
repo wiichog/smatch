@@ -28,7 +28,7 @@ import { useNextRound } from "@/hooks";
 import { api, type PersonBrief } from "@/lib/api";
 import { roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
-import { colors, radius, spacing } from "@/theme";
+import { colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 export default function JornadaScreen() {
   // `round_id` llega cuando la pantalla la abrió un push (jornada publicada /
@@ -45,6 +45,9 @@ export default function JornadaScreen() {
   const published = round?.status === "published";
   // Numeración 01/02/03 seguida aunque «¿Vas a jugar?» no aparezca (jornada cerrada).
   const matchesIndex = published ? 2 : 1;
+  const started =
+    round?.status === "closed" ||
+    (!!round?.scheduled_at && new Date(round.scheduled_at).getTime() <= Date.now());
 
   return (
     <Screen title="Jornada" subtitle={round?.league ?? "Tu próxima jornada"}>
@@ -71,7 +74,7 @@ export default function JornadaScreen() {
             {/* Motivo de cancha nocturna: llena el vacío sin robarle protagonismo al mensaje */}
             <CourtBackdrop />
             <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Sin jornada publicada</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>Sin jornada publicada</Text>
             <Muted style={{ textAlign: "center" }}>
               Cuando tu club publique la jornada, aparecerá aquí.
             </Muted>
@@ -87,20 +90,20 @@ export default function JornadaScreen() {
                   tone={round.status === "closed" ? "neutral" : "primary"}
                 />
               </View>
-              <Text style={styles.courtNumber}>{round.court_number}</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.courtNumber}>{round.court_number}</Text>
               <Chip label={`Posición ${round.position}`} color={colors.highlight} />
               {(!!whenText || !!round.physical_court_number) && (
                 <View style={styles.whereBox}>
                   {!!whenText && (
                     <View style={styles.whereRow}>
                       <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                      <Text style={styles.whereText}>{whenText}</Text>
+                      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.whereText}>{whenText}</Text>
                     </View>
                   )}
                   {!!round.physical_court_number && (
                     <View style={styles.whereRow}>
                       <Ionicons name="location-outline" size={18} color={colors.primary} />
-                      <Text style={styles.whereText}>Cancha {round.physical_court_number} del club</Text>
+                      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.whereText}>Cancha {round.physical_court_number} del club</Text>
                     </View>
                   )}
                 </View>
@@ -114,7 +117,7 @@ export default function JornadaScreen() {
                       (c: { name: string; position: string; avatar_url: string | null }) => (
                         <View key={c.position} style={styles.mateRow}>
                           <Avatar name={c.name} uri={c.avatar_url} size={38} />
-                          <Text style={styles.mateName} numberOfLines={1}>
+                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.mateName} numberOfLines={1}>
                             {c.name}
                           </Text>
                           <Chip label={c.position} color={colors.textMuted} />
@@ -150,7 +153,7 @@ export default function JornadaScreen() {
                   <TeamRow players={m.team_1} isMe={isMe} />
                   <View style={styles.vsRow}>
                     <View style={styles.vsLine} />
-                    <Text style={styles.vsText}>VS</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.vsText}>VS</Text>
                     <View style={styles.vsLine} />
                   </View>
                   <TeamRow players={m.team_2} isMe={isMe} />
@@ -158,7 +161,9 @@ export default function JornadaScreen() {
               )
             )}
 
-            <FeedbackSection roundId={round.round_id} index={matchesIndex + 1} />
+            {/* La bitácora es de DESPUÉS de jugar: antes de la hora de la jornada solo
+                alargaba la pantalla con una pregunta que todavía no tiene respuesta. */}
+            {started && <FeedbackSection roundId={round.round_id} index={matchesIndex + 1} />}
           </>
         )}
       </ScrollView>
@@ -188,7 +193,7 @@ function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n?: string 
       <View style={{ flex: 1, gap: 1 }}>
         {list.map((p, i) => (
           <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={[styles.playerName, isMe(p?.name) && { color: colors.primary }]} numberOfLines={1}>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.playerName, isMe(p?.name) && { color: colors.primary }]} numberOfLines={1}>
               {p?.name}
             </Text>
             {isMe(p?.name) && <Chip label="Tú" color={colors.primary} />}
@@ -203,12 +208,13 @@ function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n?: string 
 function FeedbackSection({ roundId, index }: { roundId: number; index: number }) {
   const token = useAuth((s) => s.token);
   const toast = useToast();
-  const [comment, setComment] = useState("");
+  const [note, setNote] = useState("");
+  // Lo que se guardó en el campo viejo «Tu experiencia» (eran dos campos casi iguales):
+  // se conserva tal cual al guardar para no borrar nada que el jugador ya escribió.
   const [experience, setExperience] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [savedUrl, setSavedUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -216,7 +222,7 @@ function FeedbackSection({ roundId, index }: { roundId: number; index: number })
     api
       .roundFeedback(token, roundId)
       .then((fb) => {
-        setComment(fb?.comment ?? "");
+        setNote(fb?.comment ?? "");
         setExperience(fb?.experience ?? "");
         setSavedUrl(fb?.photo_url ?? null);
       })
@@ -237,12 +243,10 @@ function FeedbackSection({ roundId, index }: { roundId: number; index: number })
     if (!token) return;
     setSaving(true);
     setError(null);
-    setDone(false);
     try {
-      const fb = await api.submitRoundFeedback(token, roundId, { comment, experience }, photoUri);
+      const fb = await api.submitRoundFeedback(token, roundId, { comment: note, experience }, photoUri);
       setSavedUrl(fb?.photo_url ?? savedUrl);
       setPhotoUri(null);
-      setDone(true);
       toast.show("Bitácora guardada.");
     } catch (e) {
       setError((e as Error).message);
@@ -257,32 +261,30 @@ function FeedbackSection({ roundId, index }: { roundId: number; index: number })
     <>
       <SectionHeader index={index} title="Tu bitácora" style={styles.section} />
       <GlassCard style={{ gap: spacing.sm }}>
-        <Label>Comentario</Label>
-        <TextInput
+        {/* Hoy nadie del club la lee: se presenta como lo que es, una nota personal.
+            Antes pedía «Comentario» y «Tu experiencia», dos preguntas casi iguales. */}
+        <Muted>Tus notas y una foto de la jornada. Solo tú las ves.</Muted>
+        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
           style={styles.fbInput}
           multiline
-          value={comment}
-          onChangeText={setComment}
-          placeholder="¿Cómo estuvo tu jornada?"
+          value={note}
+          onChangeText={setNote}
+          placeholder="¿Cómo te fue? Con quién jugaste mejor, qué quieres mejorar…"
           placeholderTextColor={colors.textMuted}
+          accessibilityLabel="Notas de tu jornada"
         />
-        <Label>Tu experiencia</Label>
-        <TextInput
-          style={styles.fbInput}
-          multiline
-          value={experience}
-          onChangeText={setExperience}
-          placeholder="Cuéntanos tu experiencia…"
-          placeholderTextColor={colors.textMuted}
-        />
+        {!!experience && (
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.fbOld}>
+            Nota anterior: <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ color: colors.text }}>{experience}</Text>
+          </Text>
+        )}
         <Pressable onPress={pick} style={styles.fbAttach}>
           <Ionicons name="image-outline" size={18} color={colors.primary} />
-          <Text style={styles.fbAttachText}>{preview ? "Cambiar foto" : "Adjuntar foto (opcional)"}</Text>
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.fbAttachText}>{preview ? "Cambiar foto" : "Agregar una foto (opcional)"}</Text>
         </Pressable>
         {preview && <Image source={{ uri: preview }} style={styles.fbThumb} />}
-        {error && <Text style={{ color: colors.danger, fontSize: 13 }}>{error}</Text>}
-        {done && <Text style={{ color: colors.highlight, fontSize: 13 }}>Guardado ✓</Text>}
-        <Button title="Guardar bitácora" onPress={save} loading={saving} />
+        {error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ color: colors.danger, fontSize: 13 }}>{error}</Text>}
+        <Button title="Guardar" onPress={save} loading={saving} />
       </GlassCard>
     </>
   );
@@ -304,6 +306,7 @@ const styles = StyleSheet.create({
   fbAttach: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xs },
   fbAttachText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
   fbThumb: { width: 96, height: 96, borderRadius: radius.md },
+  fbOld: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   emptyCard: {
     marginTop: spacing.lg,
     alignItems: "center",

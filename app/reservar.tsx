@@ -25,7 +25,7 @@ import { Button, Label, Muted } from "@/components/ui";
 import { api, type FreeSlot } from "@/lib/api";
 import { capitalize, duration, hhmm, isoDate, longDay, money, nextDays, shortDayLabel } from "@/lib/format";
 import { useAuth } from "@/store/auth";
-import { colors, fonts, radius, spacing } from "@/theme";
+import { colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Invite = { name: string; phone: string };
 
@@ -123,13 +123,13 @@ export default function ReservarScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <GlassCard strong style={{ alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl }}>
             <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
-            <Text style={styles.title}>{result.court_name}</Text>
-            <Text style={styles.subtitle}>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>{result.court_name}</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.subtitle}>
               {capitalize(longDay(day))} · {hhmm(result.start_time)}–{hhmm(result.end_time)}
             </Text>
             <View style={styles.payNote}>
               <Ionicons name="cash-outline" size={18} color={colors.highlight} />
-              <Text style={styles.payNoteText}>Pagas {money(myShare)} en el club</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.payNoteText}>Pagas {money(myShare)} en el club</Text>
             </View>
           </GlassCard>
 
@@ -178,7 +178,7 @@ export default function ReservarScreen() {
         ) : courts.length === 0 ? (
           <GlassCard style={{ alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl }}>
             <Ionicons name="tennisball-outline" size={36} color={colors.textMuted} />
-            <Text style={styles.title}>Tu club aún no renta canchas</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>Tu club aún no renta canchas</Text>
             <Muted style={{ textAlign: "center" }}>Cuando abra la renta desde la app, aparecerán aquí.</Muted>
           </GlassCard>
         ) : (
@@ -190,7 +190,7 @@ export default function ReservarScreen() {
                 return (
                   <Pressable key={isoDate(d)} onPress={() => setDay(d)} accessibilityState={{ selected: on }}>
                     <View style={[styles.chip, styles.dayChip, on && styles.chipOn]}>
-                      <Text style={[styles.chipText, on && styles.chipTextOn]}>{shortDayLabel(d)}</Text>
+                      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.chipText, on && styles.chipTextOn]}>{shortDayLabel(d)}</Text>
                     </View>
                   </Pressable>
                 );
@@ -206,7 +206,7 @@ export default function ReservarScreen() {
                     return (
                       <Pressable key={c.id} onPress={() => setCourtId(c.id)} accessibilityState={{ selected: on }}>
                         <View style={[styles.chip, on && styles.chipOn]}>
-                          <Text style={[styles.chipText, on && styles.chipTextOn]}>{c.name}</Text>
+                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.chipText, on && styles.chipTextOn]}>{c.name}</Text>
                         </View>
                       </Pressable>
                     );
@@ -230,7 +230,7 @@ export default function ReservarScreen() {
                   return (
                     <Pressable key={s.start_time} onPress={() => setSlot(s)} accessibilityState={{ selected: on }}>
                       <View style={[styles.chip, on && styles.chipOn]}>
-                        <Text style={[styles.chipText, on && styles.chipTextOn]}>{hhmm(s.start_time)}</Text>
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.chipText, on && styles.chipTextOn]}>{hhmm(s.start_time)}</Text>
                       </View>
                     </Pressable>
                   );
@@ -242,14 +242,14 @@ export default function ReservarScreen() {
               <>
                 {/* Resumen de lo que va a apartar: dónde, cuándo, cuánto dura y cuánto cuesta. */}
                 <GlassCard strong style={{ marginTop: spacing.md, gap: 4 }}>
-                  <Text style={styles.summaryTitle}>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.summaryTitle}>
                     {court?.name} · {capitalize(longDay(day))}
                   </Text>
                   <Muted>
                     {hhmm(slot.start_time)}–{hhmm(slot.end_time)}
                     {duration(slot.start_time, slot.end_time) ? ` (${duration(slot.start_time, slot.end_time)})` : ""}
                   </Muted>
-                  <Text style={styles.price}>{money(price)}</Text>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.price}>{money(price)}</Text>
                   {perPerson != null && (
                     <Muted>
                       Entre {people} personas: {money(perPerson)} cada quien
@@ -261,14 +261,14 @@ export default function ReservarScreen() {
                 <Muted>El costo se divide entre tú y quienes agregues. Les avisas por WhatsApp.</Muted>
                 {invites.map((inv, i) => (
                   <View key={i} style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm, alignItems: "center" }}>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={[styles.input, { flex: 1 }]}
                       value={inv.name}
                       onChangeText={(t) => setInvites((a) => a.map((x, j) => (j === i ? { ...x, name: t } : x)))}
                       placeholder="Nombre"
                       placeholderTextColor={colors.textFaint}
                     />
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={[styles.input, { flex: 1 }]}
                       value={inv.phone}
                       onChangeText={(t) => setInvites((a) => a.map((x, j) => (j === i ? { ...x, phone: t } : x)))}
@@ -288,18 +288,18 @@ export default function ReservarScreen() {
                 {invites.length < 3 && (
                   <Pressable onPress={() => setInvites((a) => [...a, { name: "", phone: "" }])} style={styles.addRow}>
                     <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                    <Text style={styles.addText}>Agregar jugador</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.addText}>Agregar jugador</Text>
                   </Pressable>
                 )}
 
                 <View style={styles.payNote}>
                   <Ionicons name="cash-outline" size={18} color={colors.highlight} />
-                  <Text style={styles.payNoteText}>Se paga en el club el día del juego.</Text>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.payNoteText}>Se paga en el club el día del juego.</Text>
                 </View>
               </>
             )}
 
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
 
             {slot && (
               <View style={{ marginTop: spacing.lg }}>

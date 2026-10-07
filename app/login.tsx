@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -17,7 +18,7 @@ import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { enterAppAfterLogin } from "@/lib/notifications";
 import { useAuth } from "@/store/auth";
-import { alpha, colors, fonts, radius, spacing } from "@/theme";
+import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 // Mismo video del hero de la landing / login web (placeholder — reemplazar por
 // un clip de pádel propio servido desde CDN).
@@ -31,6 +32,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Video de fondo en loop, silenciado y autoplay.
   const player = useVideoPlayer(LOGIN_VIDEO, (p) => {
@@ -105,11 +107,11 @@ export default function Login() {
         >
           <View style={styles.inner}>
             <Logo size={52} dark />
-            <Text style={styles.tagline}>Tu liga de pádel, siempre en juego.</Text>
-            <Text style={styles.subtitle}>Consulta tu jornada, tu cancha y tu ranking.</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.tagline}>Tu liga de pádel, siempre en juego.</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.subtitle}>Consulta tu jornada, tu cancha y tu ranking.</Text>
 
             <View style={styles.form}>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={styles.input}
                 placeholder="Correo"
                 placeholderTextColor={colors.textMuted}
@@ -118,7 +120,7 @@ export default function Login() {
                 value={email}
                 onChangeText={setEmail}
               />
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={styles.input}
                 placeholder="Contraseña"
                 placeholderTextColor={colors.textMuted}
@@ -126,8 +128,23 @@ export default function Login() {
                 value={password}
                 onChangeText={setPassword}
               />
-              {!!error && <Text style={styles.error}>{error}</Text>}
+              {!!error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
               <Button title="Entrar" onPress={onLogin} loading={loading} />
+              {/* La cuenta del jugador la crea su CLUB con una invitación por correo, y
+                  esa misma invitación es como se recupera una contraseña olvidada. Sin
+                  esto, quien no tenía contraseña no sabía ni por dónde empezar. */}
+              <Pressable onPress={() => setHelpOpen((v) => !v)} hitSlop={8} accessibilityRole="button">
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpLink}>¿Primera vez o se te olvidó tu contraseña?</Text>
+              </Pressable>
+              {helpOpen && (
+                <View style={styles.helpBox}>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpText}>
+                    Tu club te manda una invitación por correo para crear tu contraseña. Si no te
+                    llegó, o si olvidaste tu contraseña, pídele a tu club que te la reenvíe: con
+                    ese enlace eliges una nueva.
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -161,4 +178,13 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   error: { color: colors.danger, fontSize: 14 },
+  helpLink: { color: colors.textMuted, fontSize: 14, textAlign: "center", textDecorationLine: "underline" },
+  helpBox: {
+    backgroundColor: alpha(colors.ink900, 0.6),
+    borderColor: colors.glassBorder,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  helpText: { color: colors.text, fontSize: 14, lineHeight: 20 },
 });

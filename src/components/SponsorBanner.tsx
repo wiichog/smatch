@@ -7,7 +7,7 @@ import { Image, StyleSheet, Text, View } from "react-native";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
-import { colors, radius, spacing } from "@/theme";
+import { colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Sponsor = { id: number; name: string; logo_url: string | null };
 
@@ -35,7 +35,7 @@ export function SponsorBanner() {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>Patrocinadores</Text>
+      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.label}>Patrocinadores</Text>
       <View style={styles.banner}>
         <Image source={{ uri: s.logo_url as string }} style={styles.logo} resizeMode="contain" />
       </View>

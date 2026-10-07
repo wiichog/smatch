@@ -15,7 +15,7 @@ import { Button, Muted, Pill } from "@/components/ui";
 import { useCancelReservation, useMyReservations } from "@/hooks";
 import type { MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, parseLocalDate, relativeDay, shortDate } from "@/lib/format";
-import { colors, spacing } from "@/theme";
+import { colors, MAX_FONT_SCALE, spacing } from "@/theme";
 
 export default function ReservasScreen() {
   const router = useRouter();
@@ -75,7 +75,7 @@ export default function ReservasScreen() {
             {upcoming.length === 0 ? (
               <GlassCard style={styles.empty}>
                 <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
-                <Text style={styles.emptyTitle}>No tienes reservas próximas</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>No tienes reservas próximas</Text>
                 <Button title="Reservar cancha" onPress={() => router.replace("/reservar")} />
               </GlassCard>
             ) : (
@@ -120,7 +120,7 @@ function ReservationCard({
   return (
     <GlassCard style={{ marginBottom: spacing.md, gap: spacing.sm, opacity: past ? 0.75 : 1 }}>
       <View style={styles.rowBetween}>
-        <Text style={styles.cardTitle}>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.cardTitle}>
           {day ? capitalize(past ? shortDate(day) : relativeDay(day)) : r.date} · {hhmm(r.start_time)}–{hhmm(r.end_time)}
         </Text>
         <StatusPill r={r} />
@@ -155,7 +155,7 @@ function PayLine({ r }: { r: MyReservation }) {
     return (
       <View style={styles.payRow}>
         <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-        <Text style={styles.payText}>Pagada</Text>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.payText}>Pagada</Text>
       </View>
     );
   }
@@ -163,7 +163,7 @@ function PayLine({ r }: { r: MyReservation }) {
   return (
     <View style={styles.payRow}>
       <Ionicons name="cash-outline" size={16} color={colors.highlight} />
-      <Text style={styles.payText}>
+      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.payText}>
         {r.my_pay_method === "venue" ? `Pagas ${money(r.my_share)} en el club` : `Tu parte: ${money(r.my_share)}`}
       </Text>
     </View>

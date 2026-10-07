@@ -8,7 +8,7 @@ import { useBugReport } from "@/components/BugReport";
 import { Button } from "@/components/ui";
 import { HOME_ROUTE } from "@/lib/routes";
 import { useAuth } from "@/store/auth";
-import { colors, fonts, spacing } from "@/theme";
+import { colors, fonts, MAX_FONT_SCALE, spacing } from "@/theme";
 
 /**
  * Ruta que no existe: un enlace viejo, un href mal escrito, un push de una versión más
@@ -29,8 +29,8 @@ export default function NotFound() {
       <AuroraBackground />
       <SafeAreaView style={styles.wrap}>
         <Ionicons name="compass-outline" size={56} color={colors.primary} />
-        <Text style={styles.title}>No encontramos esta pantalla</Text>
-        <Text style={styles.msg}>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>No encontramos esta pantalla</Text>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.msg}>
           El enlace que abriste ya no existe o cambió de lugar. Vuelve al inicio para
           seguir.
         </Text>

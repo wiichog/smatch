@@ -10,7 +10,7 @@ import { AppErrorFallback } from "@/components/AppErrorFallback";
 import { api } from "@/lib/api";
 import { registerDevice } from "@/lib/push";
 import { useAuth } from "@/store/auth";
-import { alpha, colors, radius } from "@/theme";
+import { alpha, colors, radius, TIGHT_FONT_SCALE } from "@/theme";
 
 /** Red de seguridad por-pestaña: un throw en una pantalla de tab cae aquí, no tumba la app. */
 export function ErrorBoundary(props: ErrorBoundaryProps) {
@@ -70,7 +70,11 @@ function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
                     color={active ? colors.primary : colors.textMuted}
                   />
                 </View>
-                <Text style={[styles.label, { color: active ? colors.primary : colors.textFaint }]}>
+                <Text
+                  style={[styles.label, { color: active ? colors.primary : colors.textFaint }]}
+                  maxFontSizeMultiplier={TIGHT_FONT_SCALE}
+                  numberOfLines={1}
+                >
                   {tab.label}
                 </Text>
               </Pressable>

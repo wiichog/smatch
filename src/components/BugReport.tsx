@@ -38,7 +38,7 @@ import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { captureContext, enqueueReport, flushQueue } from "@/lib/report";
 import { useAuth } from "@/store/auth";
-import { alpha, colors, fonts, radius, spacing } from "@/theme";
+import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 interface BugReportContextValue {
   open: () => void;
@@ -150,7 +150,7 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
             <View style={styles.header}>
               <View style={styles.titleRow}>
                 <Ionicons name="bug" size={20} color={colors.primary} />
-                <Text style={styles.title}>Reportar un problema</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>Reportar un problema</Text>
               </View>
               <Pressable onPress={reset} hitSlop={12} accessibilityLabel="Cerrar">
                 <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -160,8 +160,8 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
             {done ? (
               <View style={styles.doneBox}>
                 <Ionicons name="checkmark-circle" size={48} color={colors.highlight} />
-                <Text style={styles.doneTitle}>¡Gracias por avisar!</Text>
-                <Text style={styles.doneText}>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.doneTitle}>¡Gracias por avisar!</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.doneText}>
                   {queued
                     ? "Guardamos tu reporte y lo enviaremos cuando haya conexión."
                     : "Recibimos tu reporte. Nuestro equipo lo revisará."}
@@ -175,8 +175,8 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                <Text style={styles.label}>¿Qué pasó?</Text>
-                <TextInput
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.label}>¿Qué pasó?</Text>
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={styles.input}
                   placeholder="Cuéntanos qué esperabas y qué ocurrió…"
                   placeholderTextColor={colors.textMuted}
@@ -187,17 +187,17 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
 
                 <Pressable onPress={pickImage} style={styles.attachRow}>
                   <Ionicons name="image-outline" size={18} color={colors.primary} />
-                  <Text style={styles.attachText}>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.attachText}>
                     {imageUri ? "Cambiar captura" : "Adjuntar captura (opcional)"}
                   </Text>
                 </Pressable>
                 {imageUri && <Image source={{ uri: imageUri }} style={styles.thumb} />}
 
-                <Text style={styles.hint}>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.hint}>
                   Adjuntamos automáticamente tu versión de la app y el modelo del equipo.
                 </Text>
 
-                {error && <Text style={styles.error}>{error}</Text>}
+                {error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
 
                 <Button
                   title="Enviar reporte"

@@ -15,13 +15,22 @@ import { useDashboard, useMyReservations, useNextRound } from "@/hooks";
 import type { DashboardData, Direction, MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
-import { alpha, colors, fonts, radius, spacing } from "@/theme";
+import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing, TIGHT_FONT_SCALE } from "@/theme";
 
-const TREND: Record<Direction, { symbol: string; color: string }> = {
-  up: { symbol: "↑", color: colors.success },
-  down: { symbol: "↓", color: colors.danger },
-  stay: { symbol: "=", color: colors.textFaint },
+const TREND: Record<Direction, { symbol: string; color: string; said: string }> = {
+  up: { symbol: "↑", color: colors.success, said: "subiste de pista" },
+  down: { symbol: "↓", color: colors.danger, said: "bajaste de pista" },
+  stay: { symbol: "=", color: colors.textFaint, said: "te quedaste" },
 };
+
+/**
+ * El backend manda la tendencia de la más reciente a la más vieja (3 como máximo); se
+ * pinta al revés para leerse como una línea de tiempo: la última jornada queda a la
+ * derecha, junto a los puntos.
+ */
+function chronological(trend: Direction[] | undefined): Direction[] {
+  return [...(trend ?? [])].slice(0, 3).reverse();
+}
 
 type Enrolled = DashboardData["enrolled_leagues"][number];
 type OpenTournament = DashboardData["open_tournaments"][number];
@@ -84,9 +93,9 @@ export default function DashboardScreen() {
           <View style={styles.greetRow}>
             <View style={{ flex: 1 }}>
               <View style={styles.overline} />
-              <Text style={styles.greet}>
-                <Text style={styles.greetLight}>Hola, </Text>
-                <Text style={styles.greetName}>{firstName || "jugador"}</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.greet}>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.greetLight}>Hola, </Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.greetName}>{firstName || "jugador"}</Text>
               </Text>
               <Muted style={{ marginTop: 2 }}>Tu resumen de hoy</Muted>
             </View>
@@ -113,38 +122,38 @@ export default function DashboardScreen() {
                 <View style={styles.rowBetween}>
                   <Label>Tu próxima jornada</Label>
                   <View style={styles.jornadaTag}>
-                    <Text style={styles.jornadaTagText}>J{round.round_number}</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.jornadaTagText}>J{round.round_number}</Text>
                   </View>
                 </View>
-                <Text style={styles.heroLeague} numberOfLines={1}>{round.league}</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroLeague} numberOfLines={1}>{round.league}</Text>
                 {!!whenText && (
                   <View style={styles.whenRow}>
                     <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-                    <Text style={styles.whenText}>{whenText}</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.whenText}>{whenText}</Text>
                   </View>
                 )}
                 <View style={styles.heroStats}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.heroStatLabel}>PISTA</Text>
-                    <Text style={styles.heroStatValue}>{round.court_number}</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroStatLabel}>PISTA</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroStatValue}>{round.court_number}</Text>
                   </View>
                   <View style={styles.heroDivider} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.heroStatLabel}>POSICIÓN</Text>
-                    <Text style={styles.heroStatValue}>{round.position}</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroStatLabel}>POSICIÓN</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroStatValue}>{round.position}</Text>
                   </View>
                   {!!round.physical_court_number && (
                     <>
                       <View style={styles.heroDivider} />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.heroStatLabel}>CANCHA</Text>
-                        <Text style={styles.heroStatValue}>{round.physical_court_number}</Text>
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroStatLabel}>CANCHA</Text>
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroStatValue}>{round.physical_court_number}</Text>
                       </View>
                     </>
                   )}
                 </View>
                 <View style={styles.heroLink}>
-                  <Text style={styles.heroLinkText}>Ver partidos y compañeros</Text>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroLinkText}>Ver partidos y compañeros</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.primary} />
                 </View>
               </GlassPressable>
@@ -157,7 +166,7 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
                 <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>Sin jornada publicada</Text>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle}>Sin jornada publicada</Text>
                   <Muted>Te avisamos cuando tu club publique la próxima.</Muted>
                 </View>
               </View>
@@ -179,32 +188,44 @@ export default function DashboardScreen() {
                       {i > 0 && <View style={styles.hairline} />}
                       <View style={styles.leagueRow}>
                         <View style={styles.posBadge}>
-                          <Text style={styles.posBadgeText}>#{l.position}</Text>
+                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.posBadgeText}>#{l.position}</Text>
                         </View>
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                             {/* Logo del club (ticket #77): sin foto, Avatar cae a iniciales. */}
                             <Avatar name={l.league_name} uri={l.logo_url} size={18} />
-                            <Text style={[styles.rowTitle, { flex: 1 }]} numberOfLines={1}>{l.league_name}</Text>
+                            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.rowTitle, { flex: 1 }]} numberOfLines={1}>{l.league_name}</Text>
                           </View>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-                            <Muted>
+                            {/* Encoge y corta el texto, no las flechas: sin flexShrink, con letra
+                                grande empujaba la tendencia encima de «PTS». */}
+                            <Muted numberOfLines={1} style={{ flexShrink: 1 }}>
                               {l.current_court_number != null ? `Pista ${l.current_court_number}` : "Sin pista"}
                               {l.remaining_rounds != null ? ` · faltan ${l.remaining_rounds} jornadas` : ""}
                             </Muted>
-                            {(l.trend ?? []).slice(-3).map((d: Direction, k: number) => {
-                              const t = TREND[d] ?? TREND.stay;
-                              return (
-                                <Text key={k} style={{ color: t.color, fontWeight: "800", fontSize: 13 }}>
-                                  {t.symbol}
-                                </Text>
-                              );
-                            })}
+                            {(l.trend ?? []).length > 0 && (
+                              <View
+                                style={{ flexDirection: "row", gap: 2 }}
+                                accessible
+                                accessibilityLabel={`Últimas jornadas: ${chronological(l.trend)
+                                  .map((d) => (TREND[d] ?? TREND.stay).said)
+                                  .join(", ")}`}
+                              >
+                                {chronological(l.trend).map((d: Direction, k: number) => {
+                                  const t = TREND[d] ?? TREND.stay;
+                                  return (
+                                    <Text maxFontSizeMultiplier={TIGHT_FONT_SCALE} key={k} style={{ color: t.color, fontWeight: "800", fontSize: 13 }}>
+                                      {t.symbol}
+                                    </Text>
+                                  );
+                                })}
+                              </View>
+                            )}
                           </View>
                         </View>
                         <View style={{ alignItems: "flex-end" }}>
-                          <Text style={styles.points}>{l.points}</Text>
-                          <Text style={styles.pointsLabel}>PTS</Text>
+                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.points}>{l.points}</Text>
+                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.pointsLabel}>PTS</Text>
                         </View>
                       </View>
                     </View>
@@ -259,7 +280,7 @@ export default function DashboardScreen() {
                             </View>
                           )}
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.rowTitle} numberOfLines={1}>{t.name}</Text>
+                            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle} numberOfLines={1}>{t.name}</Text>
                             {/* Sin flecha: todavía no hay pantalla de torneo. Mientras
                                 tanto se dice lo que sí se sabe y dónde inscribirse. */}
                             <Muted>{tournamentLine(t)}</Muted>
@@ -294,7 +315,7 @@ export default function DashboardScreen() {
                             </View>
                           )}
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.rowTitle} numberOfLines={1}>{l.league_name}</Text>
+                            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle} numberOfLines={1}>{l.league_name}</Text>
                             <Muted numberOfLines={1}>
                               {l.club}
                               {l.city ? ` · ${l.city}` : ""}
@@ -341,11 +362,11 @@ function ReservationLine({ r }: { r: MyReservation }) {
   return (
     <View style={styles.leagueRow}>
       <View style={styles.dateBadge}>
-        <Text style={styles.dateBadgeDay}>{day ? day.getDate() : ""}</Text>
-        <Text style={styles.dateBadgeMonth}>{day ? monthShort(day) : ""}</Text>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.dateBadgeDay}>{day ? day.getDate() : ""}</Text>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.dateBadgeMonth}>{day ? monthShort(day) : ""}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle} numberOfLines={1}>
           {dayText} · {hhmm(r.start_time)}
         </Text>
         <Muted numberOfLines={1}>

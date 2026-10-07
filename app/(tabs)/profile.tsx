@@ -14,7 +14,7 @@ import { api } from "@/lib/api";
 import { clearPendingRoute } from "@/lib/notifications";
 import { unregisterDevice } from "@/lib/push";
 import { useAuth } from "@/store/auth";
-import { alpha, colors, radius, spacing } from "@/theme";
+import { alpha, colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 /**
  * Páginas legales y de soporte, que viven en el web. Apple exige que la política de
@@ -108,88 +108,91 @@ export default function ProfileScreen() {
               <Ionicons name="camera" size={14} color={colors.onPrimary} />
             </View>
           </Pressable>
-          <Text style={styles.name}>{user?.name}</Text>
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.name}>{user?.name}</Text>
           {/* Si la sesión no trae nombre, `name` ES el correo: no se repite debajo. */}
           {!!user?.email && user.email !== user?.name && <Muted>{user.email}</Muted>}
           <Muted style={{ fontSize: 12 }}>Toca tu foto para cambiarla</Muted>
-          {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
+          {photoError ? <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{photoError}</Text> : null}
         </GlassCard>
 
-        {/* Editar perfil */}
-        <GlassPressable
-          onPress={() => router.push("/profile-edit")}
-          style={styles.reportRow}
-          accessibilityLabel="Editar perfil"
-        >
-          <View style={styles.reportIcon}>
-            <Ionicons name="person-circle" size={20} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>Editar perfil</Text>
-            <Muted>Tu foto, contacto, dirección y datos generales.</Muted>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </GlassPressable>
+        {/* Acciones del jugador: una lista, no tarjetas sueltas — 8 pt entre filas. */}
+        <View style={styles.actions}>
+          {/* Editar perfil */}
+          <GlassPressable
+            onPress={() => router.push("/profile-edit")}
+            style={styles.reportRow}
+            accessibilityLabel="Editar perfil"
+          >
+            <View style={styles.reportIcon}>
+              <Ionicons name="person-circle" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Editar perfil</Text>
+              <Muted>Tu foto, contacto, dirección y datos generales.</Muted>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </GlassPressable>
 
-        {/* Reservar cancha */}
-        <GlassPressable
-          onPress={() => router.push("/reservar")}
-          style={styles.reportRow}
-          accessibilityLabel="Reservar cancha"
-        >
-          <View style={styles.reportIcon}>
-            <Ionicons name="tennisball" size={20} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>Reservar cancha</Text>
-            <Muted>Aparta una cancha y divide el costo con tus amigos.</Muted>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </GlassPressable>
+          {/* Reservar cancha */}
+          <GlassPressable
+            onPress={() => router.push("/reservar")}
+            style={styles.reportRow}
+            accessibilityLabel="Reservar cancha"
+          >
+            <View style={styles.reportIcon}>
+              <Ionicons name="tennisball" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Reservar cancha</Text>
+              <Muted>Aparta una cancha y divide el costo con tus amigos.</Muted>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </GlassPressable>
 
-        {/* Mis reservas: lo apartado, cuánto toca pagar y cancelar */}
-        <GlassPressable
-          onPress={() => router.push("/reservas")}
-          style={styles.reportRow}
-          accessibilityLabel="Mis reservas"
-        >
-          <View style={styles.reportIcon}>
-            <Ionicons name="calendar" size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>Mis reservas</Text>
-            <Muted>Tus canchas apartadas, lo que pagas y cancelar.</Muted>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </GlassPressable>
+          {/* Mis reservas: lo apartado, cuánto toca pagar y cancelar */}
+          <GlassPressable
+            onPress={() => router.push("/reservas")}
+            style={styles.reportRow}
+            accessibilityLabel="Mis reservas"
+          >
+            <View style={styles.reportIcon}>
+              <Ionicons name="calendar" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Mis reservas</Text>
+              <Muted>Tus canchas apartadas, lo que pagas y cancelar.</Muted>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </GlassPressable>
 
-        {/* Impugnaciones por votar */}
-        <GlassPressable
-          onPress={() => router.push("/disputes")}
-          style={styles.reportRow}
-          accessibilityLabel="Impugnaciones"
-        >
-          <View style={styles.reportIcon}>
-            <Ionicons name="flag" size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>Impugnaciones</Text>
-            <Muted>Vota los marcadores impugnados de tus partidos.</Muted>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </GlassPressable>
+          {/* Impugnaciones por votar */}
+          <GlassPressable
+            onPress={() => router.push("/disputes")}
+            style={styles.reportRow}
+            accessibilityLabel="Impugnaciones"
+          >
+            <View style={styles.reportIcon}>
+              <Ionicons name="flag" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Impugnaciones</Text>
+              <Muted>Vota los marcadores impugnados de tus partidos.</Muted>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </GlassPressable>
 
-        {/* Reportar un problema */}
-        <GlassPressable onPress={bugReport.open} style={styles.reportRow} accessibilityLabel="Reportar un problema">
-          <View style={styles.reportIcon}>
-            <Ionicons name="bug" size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>Reportar un problema</Text>
-            <Muted>¿Algo falló? Cuéntanos (o sacude el teléfono).</Muted>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </GlassPressable>
+          {/* Reportar un problema */}
+          <GlassPressable onPress={bugReport.open} style={styles.reportRow} accessibilityLabel="Reportar un problema">
+            <View style={styles.reportIcon}>
+              <Ionicons name="bug" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Reportar un problema</Text>
+              <Muted>¿Algo falló? Cuéntanos (o sacude el teléfono).</Muted>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </GlassPressable>
+        </View>
 
         {/* Ayuda y legal — abren el web en el navegador del sistema */}
         <View style={styles.legalHead}>
@@ -212,7 +215,7 @@ export default function ProfileScreen() {
               <Ionicons name={link.icon} size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.reportTitle}>{link.title}</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>{link.title}</Text>
               <Muted>{link.hint}</Muted>
             </View>
             <Ionicons name="open-outline" size={16} color={colors.textFaint} />
@@ -283,8 +286,8 @@ const styles = StyleSheet.create({
     borderColor: colors.surface,
   },
   error: { color: colors.danger, fontSize: 13, marginTop: spacing.xs, textAlign: "center" },
+  actions: { marginTop: spacing.lg, gap: spacing.sm },
   reportRow: {
-    marginTop: spacing.xl,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,

@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { alpha, colors, glassShadow, radius, spacing } from "@/theme";
+import { alpha, colors, glassShadow, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Tone = "success" | "info" | "error";
 type ToastState = { id: number; message: string; tone: Tone } | null;
@@ -89,7 +89,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <BlurView intensity={50} tint="dark" style={styles.blur}>
             <View style={styles.row}>
               <Ionicons name={icon.name} size={20} color={icon.color} />
-              <Text style={styles.text}>{toast.message}</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.text}>{toast.message}</Text>
             </View>
           </BlurView>
         </Animated.View>

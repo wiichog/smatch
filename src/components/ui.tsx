@@ -12,7 +12,7 @@ import {
   ViewStyle,
 } from "react-native";
 
-import { alpha, colors, fonts, radius, spacing } from "@/theme";
+import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing, TIGHT_FONT_SCALE } from "@/theme";
 
 export function Button({
   title,
@@ -69,7 +69,7 @@ export function Button({
         ) : (
           <View style={styles.btnInner}>
             {icon}
-            <Text style={[styles.btnText, { color: fg }]}>{title}</Text>
+            <Text style={[styles.btnText, { color: fg }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>{title}</Text>
           </View>
         )}
       </Animated.View>
@@ -96,7 +96,7 @@ export function Pill({
   }[tone];
   return (
     <View style={[styles.pill, { backgroundColor: map.bg }]}>
-      <Text style={{ color: map.fg, fontSize: 12, fontWeight: "800" }}>{label}</Text>
+      <Text style={{ color: map.fg, fontSize: 12, fontWeight: "800" }} maxFontSizeMultiplier={TIGHT_FONT_SCALE}>{label}</Text>
     </View>
   );
 }
@@ -105,18 +105,18 @@ export function Pill({
 export function Chip({ label, color }: { label: string; color: string }) {
   return (
     <View style={[styles.chip, { backgroundColor: alpha(color, 0.16) }]}>
-      <Text style={{ color, fontSize: 11, fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color, fontSize: 11, fontWeight: "700" }} maxFontSizeMultiplier={TIGHT_FONT_SCALE}>{label}</Text>
     </View>
   );
 }
 
 /** Overline en MAYÚSCULAS con tracking — etiqueta de campo/dato. */
 export function Label({ children }: { children: ReactNode }) {
-  return <Text style={styles.label}>{children}</Text>;
+  return <Text style={styles.label} maxFontSizeMultiplier={MAX_FONT_SCALE}>{children}</Text>;
 }
 
 export function H1({ children }: { children: ReactNode }) {
-  return <Text style={styles.h1}>{children}</Text>;
+  return <Text style={styles.h1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{children}</Text>;
 }
 
 export function Muted({
@@ -129,7 +129,7 @@ export function Muted({
   numberOfLines?: number;
 }) {
   return (
-    <Text style={[styles.muted, style]} numberOfLines={numberOfLines}>
+    <Text style={[styles.muted, style]} numberOfLines={numberOfLines} maxFontSizeMultiplier={MAX_FONT_SCALE}>
       {children}
     </Text>
   );

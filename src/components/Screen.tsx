@@ -3,7 +3,7 @@ import { Animated, Easing, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuroraBackground } from "./AuroraBackground";
-import { colors, fonts, spacing } from "@/theme";
+import { colors, fonts, MAX_FONT_SCALE, spacing } from "@/theme";
 
 /**
  * Contenedor de pantalla: fondo aurora + safe area (respira del notch/Dynamic Island)
@@ -51,8 +51,8 @@ export function Screen({
               <View style={{ flex: 1 }}>
                 {/* Overline lima — firma editorial (misma idea que el kicker del panel) */}
                 <View style={styles.overline} />
-                <Text style={styles.title}>{title}</Text>
-                {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+                <Text style={styles.title} maxFontSizeMultiplier={MAX_FONT_SCALE}>{title}</Text>
+                {subtitle ? <Text style={styles.subtitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>{subtitle}</Text> : null}
               </View>
               {right}
             </View>

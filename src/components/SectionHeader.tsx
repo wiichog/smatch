@@ -1,6 +1,6 @@
 import { Text, View, type ViewStyle } from "react-native";
 
-import { colors, fonts } from "@/theme";
+import { colors, fonts, MAX_FONT_SCALE } from "@/theme";
 
 /**
  * Encabezado de sección editorial (patrón de la landing/panel): numeración 01/02
@@ -22,7 +22,7 @@ export function SectionHeader({
   return (
     <View style={[{ flexDirection: "row", alignItems: "center", gap: 8 }, style]}>
       {index !== undefined && (
-        <Text style={{ fontFamily: fonts.displaySemi, fontSize: 11, color: colors.textFaint }}>
+        <Text style={{ fontFamily: fonts.displaySemi, fontSize: 11, color: colors.textFaint }} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           {String(index).padStart(2, "0")}
         </Text>
       )}
@@ -37,11 +37,12 @@ export function SectionHeader({
           color: colors.text,
           fontWeight: "700",
         }}
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
       >
         {title}
       </Text>
       {count !== undefined && (
-        <Text style={{ fontSize: 11, color: colors.textFaint }}>({count})</Text>
+        <Text style={{ fontSize: 11, color: colors.textFaint }} maxFontSizeMultiplier={MAX_FONT_SCALE}>({count})</Text>
       )}
     </View>
   );

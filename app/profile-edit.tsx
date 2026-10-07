@@ -24,7 +24,7 @@ import { useToast } from "@/components/Toast";
 import { Button, Label, Muted } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
-import { alpha, colors, radius, spacing } from "@/theme";
+import { alpha, colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Field = {
   key: string;
@@ -231,7 +231,7 @@ export default function ProfileEditScreen() {
           {FIELDS.map((f) => (
             <View key={f.key} style={styles.field}>
               <Label>{f.label}</Label>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, fieldErrors[f.key] ? styles.inputError : null]}
                 value={form[f.key] ?? ""}
                 onChangeText={(t) => {
@@ -244,11 +244,11 @@ export default function ProfileEditScreen() {
                 keyboardType={f.keyboardType ?? "default"}
                 autoCapitalize={f.key === "email" ? "none" : "sentences"}
               />
-              {fieldErrors[f.key] ? <Text style={styles.error}>{fieldErrors[f.key]}</Text> : null}
+              {fieldErrors[f.key] ? <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{fieldErrors[f.key]}</Text> : null}
             </View>
           ))}
 
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
 
           <View style={{ marginTop: spacing.md }}>
             <Button title="Guardar cambios" onPress={save} loading={saving} disabled={loading} />

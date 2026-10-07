@@ -40,6 +40,18 @@ export const colors = {
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+
+/**
+ * Cuánto puede crecer la letra con el tamaño de texto del teléfono (Ajustes →
+ * Accesibilidad → Texto más grande). Sin tope, al máximo la letra sale ~3 veces más
+ * grande y las pantallas se desarman: las pestañas se enciman («InicioJornRank…»), el
+ * avatar se aplasta y los números de la jornada se cortan. Sigue creciendo, hasta un 35 %
+ * (mismo valor que CREO). RN 0.85 ya no acepta un tope global (`Text.defaultProps` murió
+ * con React 19), así que va en los componentes compartidos y en los textos grandes.
+ */
+export const MAX_FONT_SCALE = 1.35;
+/** Textos dentro de cajas de ancho fijo (pestañas, insignias): crecen menos. */
+export const TIGHT_FONT_SCALE = 1.15;
 export const radius = { sm: 12, md: 14, lg: 20, xl: 28, full: 999, pill: 999 } as const;
 
 export const font = {

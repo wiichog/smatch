@@ -55,7 +55,7 @@ export function Avatar({
       {uri ? (
         <Image source={{ uri }} style={{ width: size, height: size, borderRadius: r }} />
       ) : (
-        <Text style={{ color: hue, fontWeight: "800", fontSize: size * 0.36 }}>
+        <Text style={{ color: hue, fontWeight: "800", fontSize: size * 0.36 }} allowFontScaling={false}>
           {name ? initials(name) : "·"}
         </Text>
       )}

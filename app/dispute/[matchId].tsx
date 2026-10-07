@@ -12,7 +12,7 @@ import { Screen } from "@/components/Screen";
 import { Button, Label, Muted } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
-import { colors, radius, spacing } from "@/theme";
+import { colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 /**
  * Ticket #67: un set de pádel no pasa de 7 (7-6 o 6-7 es el tope). El backend ya lo
@@ -70,7 +70,7 @@ export default function DisputeScreen() {
         {done ? (
           <GlassCard strong style={{ alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl }}>
             <Ionicons name="checkmark-circle" size={48} color={colors.highlight} />
-            <Text style={styles.title}>Impugnación enviada</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>Impugnación enviada</Text>
             <Muted style={{ textAlign: "center" }}>
               Avisamos a los demás jugadores de tu pista para que voten. Si todos aprueban, se
               corrige el marcador.
@@ -86,7 +86,7 @@ export default function DisputeScreen() {
             <View style={styles.scoreRow}>
               <View style={{ flex: 1 }}>
                 <Label>Equipo 1</Label>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={styles.score}
                   value={t1}
                   onChangeText={(v) => {
@@ -101,10 +101,10 @@ export default function DisputeScreen() {
                   placeholderTextColor={colors.textFaint}
                 />
               </View>
-              <Text style={styles.dash}>–</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.dash}>–</Text>
               <View style={{ flex: 1 }}>
                 <Label>Equipo 2</Label>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   ref={team2Ref}
                   style={styles.score}
                   value={t2}
@@ -122,7 +122,7 @@ export default function DisputeScreen() {
                 />
               </View>
             </View>
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
             <Button title="Enviar impugnación" onPress={submit} loading={sending} disabled={t1 === "" || t2 === ""} />
           </>
         )}

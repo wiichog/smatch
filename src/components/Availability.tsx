@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 
 import { useToast } from "@/components/Toast";
 import { useSetAvailability } from "@/hooks";
-import { alpha, colors, fonts, radius, spacing } from "@/theme";
+import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Availability = "available" | "unavailable" | "pending";
 
@@ -50,7 +50,7 @@ export function AvailabilityPicker({
       {current === "pending" && (
         <View style={styles.pendingRow}>
           <Ionicons name="time-outline" size={16} color={colors.warning} />
-          <Text style={styles.pendingText}>Aún no confirmas si vas a jugar.</Text>
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.pendingText}>Aún no confirmas si vas a jugar.</Text>
         </View>
       )}
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
@@ -115,7 +115,7 @@ function Choice({
         ) : (
           <>
             {selected && <Ionicons name={icon} size={18} color={on.fg} />}
-            <Text style={[styles.choiceText, { color: selected ? on.fg : colors.text }]}>{label}</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.choiceText, { color: selected ? on.fg : colors.text }]}>{label}</Text>
           </>
         )}
       </View>

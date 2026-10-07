@@ -4,7 +4,7 @@ import { StyleSheet, Text } from "react-native";
 import { GlassCard } from "@/components/Glass";
 import { Button, Muted } from "@/components/ui";
 import { OFFLINE_MESSAGE } from "@/lib/api";
-import { colors, spacing } from "@/theme";
+import { colors, MAX_FONT_SCALE, spacing } from "@/theme";
 
 /**
  * «No pudimos cargar» con su botón de reintento.
@@ -26,7 +26,7 @@ export function LoadError({
   return (
     <GlassCard style={{ ...styles.card, ...(style ?? {}) }}>
       <Ionicons name="cloud-offline-outline" size={34} color={colors.textMuted} />
-      <Text style={styles.title}>No pudimos cargar tu información</Text>
+      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>No pudimos cargar tu información</Text>
       <Muted style={{ textAlign: "center" }}>{message}</Muted>
       <Button title="Reintentar" variant="glass" onPress={onRetry} />
     </GlassCard>

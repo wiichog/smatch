@@ -8,7 +8,7 @@ import { Screen } from "@/components/Screen";
 import { Muted } from "@/components/ui";
 import { useHistory } from "@/hooks";
 import type { HistoryRow } from "@/lib/api";
-import { alpha, colors, fonts, spacing } from "@/theme";
+import { alpha, colors, fonts, MAX_FONT_SCALE, spacing } from "@/theme";
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function HistoryScreen() {
         ) : rows.length === 0 ? (
           <GlassCard style={{ marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.xl, gap: 8 }}>
             <Ionicons name="time-outline" size={38} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Todavía sin partidos</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>Todavía sin partidos</Text>
             <Muted style={{ textAlign: "center" }}>Aquí verás el resultado y los puntos de cada jornada.</Muted>
           </GlassCard>
         ) : (
@@ -45,17 +45,17 @@ export default function HistoryScreen() {
                   <View style={styles.row}>
                     <View style={[styles.tick, { backgroundColor: tone }]} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.title}>
+                      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>
                         Jornada {row.round_number} · Pista {row.court_number}
                       </Text>
                       <Muted>Partido {row.match_number}</Muted>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
-                      <Text style={styles.score}>
-                        {row.games_for} <Text style={styles.scoreSep}>-</Text> {row.games_against}
+                      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.score}>
+                        {row.games_for} <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.scoreSep}>-</Text> {row.games_against}
                       </Text>
                       <View style={[styles.deltaPill, { backgroundColor: alpha(tone, 0.16) }]}>
-                        <Text style={{ color: tone, fontWeight: "800", fontSize: 12 }}>
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ color: tone, fontWeight: "800", fontSize: 12 }}>
                           {row.points_delta > 0 ? `+${row.points_delta}` : row.points_delta} pts
                         </Text>
                       </View>
@@ -67,7 +67,7 @@ export default function HistoryScreen() {
                     accessibilityLabel="Impugnar marcador"
                   >
                     <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.disputeText}>¿Marcador incorrecto? Impugnar</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.disputeText}>¿Marcador incorrecto? Impugnar</Text>
                   </Pressable>
                 </GlassCard>
               );
