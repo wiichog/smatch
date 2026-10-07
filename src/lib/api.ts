@@ -99,6 +99,9 @@ export interface NextRound {
     time_slot?: string | null;
     physical_court_number?: number | null;
     position: string;
+    /** Juega de suplente: el lugar es de `substitute_for`. Falta en un backend anterior. */
+    is_substitute?: boolean;
+    substitute_for?: string | null;
     courtmates: { name: string; position: string; avatar_url: string | null }[];
     matches: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }[];
   } | null;
@@ -107,6 +110,20 @@ export interface NextRound {
    * juega en dos ligas ve y confirma las dos. Falta en un backend anterior.
    */
   upcoming?: UpcomingRound[];
+  /** Jornadas vigentes donde OTRO juega en tu lugar (te cubre un suplente). */
+  covered?: CoveredRound[];
+}
+
+export interface CoveredRound {
+  round_id: number;
+  league_id: number;
+  league: string;
+  club: string;
+  round_number: number;
+  scheduled_at: string | null;
+  court_number: number;
+  /** Quién juega en tu lugar. */
+  substitute: string;
 }
 
 export interface UpcomingRound {
@@ -119,6 +136,7 @@ export interface UpcomingRound {
   time_slot: string | null;
   court_number: number;
   availability: "available" | "unavailable" | "pending";
+  is_substitute?: boolean;
 }
 
 export interface Ranking {
@@ -179,6 +197,60 @@ export interface PlayerStats {
   games_against: number;
   rounds_played: number;
   moves: { up: number; down: number };
+}
+
+/** Un torneo en la lista del jugador (`GET /api/v2/me/tournaments/`). */
+export interface TournamentRow {
+  id: number;
+  name: string;
+  club: string;
+  logo_url: string | null;
+  format: string;
+  format_label: string;
+  status: "draft" | "active" | "finished";
+  starts_on: string | null;
+  /** Ya juega en él (lo inscribió su club o se inscribió). */
+  enrolled: boolean;
+  my_category: string | null;
+  partner: string | null;
+}
+
+/** `GET /api/v2/tournaments/<id>/`. */
+export interface TournamentDetail {
+  tournament: {
+    id: number;
+    name: string;
+    club: string;
+    logo_url: string | null;
+    background_image_url: string | null;
+    format: string;
+    format_label: string;
+    status: "draft" | "active" | "finished";
+    starts_on: string | null;
+    /** Fechas «YYYY-MM-DD» en que se juega. */
+    days: string[];
+    time_slots: string[];
+    match_duration_minutes: number | null;
+    open_to_app: boolean;
+  };
+  enrolled: boolean;
+  my_category: string | null;
+  partner: string | null;
+  categories: { id: number; name: string; registered_pairs: number; max_pairs: number | null; is_mine: boolean }[];
+  matches: {
+    id: number;
+    category: string;
+    stage: "group" | "bracket";
+    stage_label: string;
+    date: string | null;
+    start_time: string | null;
+    court: string | null;
+    partner: string | null;
+    rivals: string[];
+    games_for: number | null;
+    games_against: number | null;
+    result: "win" | "loss" | "draw" | null;
+  }[];
 }
 
 /** Qué pasó con un jugador al cerrar la jornada. */
@@ -245,6 +317,8 @@ export interface HistoryRow {
   round_id?: number;
   /** Solo una jornada cerrada tiene resultados que ver. */
   round_closed?: boolean;
+  /** La jugó cubriendo a alguien: sus puntos cuentan, la pista no es suya. */
+  as_substitute?: boolean;
   league_id?: number;
   league_name?: string;
   scheduled_at?: string | null;
@@ -398,6 +472,8 @@ export const api = {
   roundResults: (token: string, roundId: number) =>
     request<RoundResults>(`/api/v2/rounds/${roundId}/results/`, { token }),
   myStats: (token: string) => request<PlayerStats>("/api/v2/me/stats/", { token }),
+  myTournaments: (token: string) => request<{ tournaments: TournamentRow[] }>("/api/v2/me/tournaments/", { token }),
+  tournament: (token: string, id: number) => request<TournamentDetail>(`/api/v2/tournaments/${id}/`, { token }),
   // `roundId` pide UNA jornada concreta: es lo que usa el deep link de un push, que
   // trae el id. Sin él, el servidor elige la más próxima del jugador.
   nextRound: (token: string, roundId?: number) =>

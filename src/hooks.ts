@@ -11,6 +11,8 @@ import {
   type Ranking,
   type RentalCourt,
   type RoundResults,
+  type TournamentDetail,
+  type TournamentRow,
 } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 
@@ -87,6 +89,25 @@ export function useRentalCourts() {
     enabled: !!token,
     // Que un club abra o cierre la renta pasa muy de vez en cuando.
     staleTime: 5 * 60_000,
+  });
+}
+
+/** Torneos del jugador: en los que juega y los abiertos de sus clubes. */
+export function useMyTournaments() {
+  const token = useAuth((s) => s.token);
+  return useQuery<{ tournaments: TournamentRow[] }>({
+    queryKey: ["tournaments"],
+    queryFn: () => api.myTournaments(token!),
+    enabled: !!token,
+  });
+}
+
+export function useTournament(id: number | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<TournamentDetail>({
+    queryKey: ["tournament", id],
+    queryFn: () => api.tournament(token!, id!),
+    enabled: !!token && id != null,
   });
 }
 

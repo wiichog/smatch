@@ -25,6 +25,7 @@ type Group = {
   key: string;
   roundId: number | null;
   roundClosed: boolean;
+  asSubstitute: boolean;
   league: string | null;
   roundNumber: number;
   courtNumber: number;
@@ -84,6 +85,11 @@ function RoundCard({ group: g }: { group: Group }) {
         </View>
       </View>
 
+      {g.asSubstitute && (
+        <View style={{ alignSelf: "flex-start" }}>
+          <Pill label="Jugaste de suplente" tone="primary" />
+        </View>
+      )}
       {g.movement && <Movement movement={g.movement} />}
 
       {g.matches.map((m) => (
@@ -213,6 +219,7 @@ function groupByRound(rows: HistoryRow[]): Group[] {
         key,
         roundId: r.round_id ?? null,
         roundClosed: r.round_closed ?? false,
+        asSubstitute: r.as_substitute ?? false,
         league: r.league_name ?? null,
         roundNumber: r.round_number,
         courtNumber: r.court_number,

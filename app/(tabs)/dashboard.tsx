@@ -7,12 +7,13 @@ import { AuroraBackground } from "@/components/AuroraBackground";
 import { AvailabilityPicker } from "@/components/Availability";
 import { Avatar } from "@/components/Avatar";
 import { CourtBackdrop } from "@/components/CourtBackdrop";
+import { CoveredNotice } from "@/components/CoveredNotice";
 import { GlassCard, GlassPressable } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Trend } from "@/components/Trend";
 import { Label, Muted } from "@/components/ui";
-import { useDashboard, useMyReservations, useNextRound } from "@/hooks";
+import { useDashboard, useMyReservations, useMyTournaments, useNextRound } from "@/hooks";
 import type { DashboardData, MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundShort, roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
@@ -32,7 +33,12 @@ export default function DashboardScreen() {
   const firstName = user?.name?.split(" ")[0] ?? "";
 
   const enrolled = data?.enrolled_leagues ?? [];
-  const openTournaments = data?.open_tournaments ?? [];
+  // La lista de torneos sale de me/tournaments (también los «solo del club» donde ya
+  // juegas, que antes no aparecían); si no carga, cae a la del dashboard.
+  const myTournaments = useMyTournaments();
+  const openTournaments: TournamentItem[] =
+    myTournaments.data?.tournaments ??
+    (data?.open_tournaments ?? []).map((t: OpenTournament) => ({ ...t, enrolled: false, my_category: null, partner: null }));
   const nearby = data?.nearby_leagues ?? [];
   // Solo las dos más cercanas: el inicio es un resumen, la lista completa vive en «Mis reservas».
   const upcomingReservations = (reservations.data?.upcoming ?? []).slice(0, 2);
@@ -106,7 +112,7 @@ export default function DashboardScreen() {
                 style={{ gap: spacing.sm }}
               >
                 <View style={styles.rowBetween}>
-                  <Label>Tu próxima jornada</Label>
+                  <Label>{round.is_substitute ? "Tu próxima jornada · de suplente" : "Tu próxima jornada"}</Label>
                   <View style={styles.jornadaTag}>
                     <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.jornadaTagText}>J{round.round_number}</Text>
                   </View>
@@ -138,6 +144,9 @@ export default function DashboardScreen() {
                     </>
                   )}
                 </View>
+                {round.is_substitute && !!round.substitute_for && (
+                  <Muted>Cubres a {round.substitute_for}: tus puntos cuentan, la pista sigue siendo suya.</Muted>
+                )}
                 <View style={styles.heroLink}>
                   <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.heroLinkText}>Ver partidos y compañeros</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.primary} />
@@ -167,7 +176,9 @@ export default function DashboardScreen() {
                         <Ionicons name="tennisball" size={18} color={colors.primary} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.alsoLabel}>TAMBIÉN JUEGAS</Text>
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.alsoLabel}>
+                          {u.is_substitute ? "TAMBIÉN JUEGAS · DE SUPLENTE" : "TAMBIÉN JUEGAS"}
+                        </Text>
                         <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle} numberOfLines={1}>
                           {u.league}
                         </Text>
@@ -185,7 +196,10 @@ export default function DashboardScreen() {
                     </GlassPressable>
                   );
                 })}
+              <CoveredNotice covered={nextRound.data?.covered ?? []} />
             </View>
+          ) : (nextRound.data?.covered?.length ?? 0) > 0 ? (
+            <CoveredNotice covered={nextRound.data?.covered ?? []} style={{ marginTop: spacing.lg }} />
           ) : (
             <GlassCard strong style={{ marginTop: spacing.lg }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
@@ -282,15 +296,20 @@ export default function DashboardScreen() {
                 <>
                   <SectionHeader
                     index={indexOf("tournaments")}
-                    title="Torneos de tu club"
+                    title="Torneos"
                     count={openTournaments.length}
                     style={styles.section}
                   />
                   <GlassCard style={{ gap: spacing.md }}>
-                    {openTournaments.map((t: OpenTournament, i: number) => (
+                    {openTournaments.map((t: TournamentItem, i: number) => (
                       <View key={t.id}>
                         {i > 0 && <View style={styles.hairline} />}
-                        <View style={styles.leagueRow}>
+                        <Pressable
+                          style={styles.leagueRow}
+                          onPress={() => router.push(`/tournament/${t.id}`)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t.name}: ${tournamentLine(t)}`}
+                        >
                           {/* Logo del club (ticket #77); sin logo, cae al ícono genérico. */}
                           {t.logo_url ? (
                             <Avatar name={t.name} uri={t.logo_url} size={42} />
@@ -301,11 +320,10 @@ export default function DashboardScreen() {
                           )}
                           <View style={{ flex: 1 }}>
                             <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle} numberOfLines={1}>{t.name}</Text>
-                            {/* Sin flecha: todavía no hay pantalla de torneo. Mientras
-                                tanto se dice lo que sí se sabe y dónde inscribirse. */}
-                            <Muted>{tournamentLine(t)}</Muted>
+                            <Muted numberOfLines={1}>{tournamentLine(t)}</Muted>
                           </View>
-                        </View>
+                          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                        </Pressable>
                       </View>
                     ))}
                   </GlassCard>
@@ -356,7 +374,14 @@ export default function DashboardScreen() {
 }
 
 /** «Empieza el sábado 12 de octubre · Inscríbete con tu club» / «En curso». */
-function tournamentLine(t: OpenTournament): string {
+type TournamentItem = OpenTournament & { enrolled: boolean; my_category: string | null; partner: string | null };
+
+function tournamentLine(t: TournamentItem): string {
+  // Si ya juegas, lo importante es con quién y en qué categoría.
+  if (t.enrolled) {
+    const mine = [t.my_category, t.partner ? `con ${t.partner}` : null].filter(Boolean).join(" · ");
+    return t.status === "active" ? `En curso · ${mine}` : `Inscrito · ${mine}`;
+  }
   if (t.status === "active") return "En curso";
   const start = parseLocalDate(t.starts_on);
   const today = new Date();

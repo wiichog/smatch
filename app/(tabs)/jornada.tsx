@@ -17,6 +17,7 @@ import {
 import { AvailabilityPicker } from "@/components/Availability";
 import { Avatar } from "@/components/Avatar";
 import { CourtBackdrop } from "@/components/CourtBackdrop";
+import { CoveredNotice } from "@/components/CoveredNotice";
 import { GlassCard } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -103,6 +104,8 @@ export default function JornadaScreen() {
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
         ) : isError && !data ? (
           <LoadError error={error} onRetry={() => void refetch()} style={{ marginTop: spacing.lg }} />
+        ) : !round && (data?.covered?.length ?? 0) > 0 ? (
+          <CoveredNotice covered={data?.covered ?? []} style={{ marginTop: spacing.sm }} />
         ) : !round ? (
           <GlassCard style={styles.emptyCard}>
             {/* Motivo de cancha nocturna: llena el vacío sin robarle protagonismo al mensaje */}
@@ -126,6 +129,17 @@ export default function JornadaScreen() {
               </View>
               <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.courtNumber}>{round.court_number}</Text>
               <Chip label={`Posición ${round.position}`} color={colors.highlight} />
+              {round.is_substitute && (
+                <View style={styles.subBox}>
+                  <View style={{ alignSelf: "center" }}>
+                    <Pill label="De suplente" tone="primary" />
+                  </View>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.subText}>
+                    {round.substitute_for ? `Cubres a ${round.substitute_for}.` : "Cubres a un jugador de esta pista."}
+                  </Text>
+                  <Muted style={{ textAlign: "center" }}>Tus puntos cuentan; la pista sigue siendo suya.</Muted>
+                </View>
+              )}
               {(!!whenText || !!round.physical_court_number) && (
                 <View style={styles.whereBox}>
                   {!!whenText && (
@@ -325,6 +339,8 @@ function FeedbackSection({ roundId, index }: { roundId: number; index: number })
 }
 
 const styles = StyleSheet.create({
+  subBox: { alignItems: "center", gap: 4, marginTop: spacing.xs },
+  subText: { color: colors.text, fontSize: 15, fontWeight: "700", textAlign: "center" },
   // Las pastillas de liga corren de borde a borde aunque el contenido tenga margen.
   chipsScroll: { marginHorizontal: -spacing.lg, marginBottom: spacing.sm },
   chips: { paddingHorizontal: spacing.lg, gap: spacing.sm },

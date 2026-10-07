@@ -68,9 +68,13 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
       return { pathname: "/disputes", params: disputeId ? { dispute_id: disputeId } : undefined };
     }
 
-    // El torneo arrancó → el dashboard, que es donde la app lista torneos.
-    case "tournament_activated":
-      return { pathname: "/(tabs)/dashboard" };
+    // El torneo arrancó → su detalle (tus partidos y tu pareja). Sin id, Inicio.
+    case "tournament_activated": {
+      const tournamentId = id(data.tournament_id);
+      return tournamentId
+        ? { pathname: "/tournament/[id]", params: { id: tournamentId } }
+        : { pathname: "/(tabs)/dashboard" };
+    }
 
     // Cumpleaños: va dirigido al staff del club y esta app es del jugador. No hay
     // pantalla a la que llevar, así que no movemos al usuario de donde esté.
