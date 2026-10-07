@@ -11,7 +11,7 @@ import { useRentalCourts } from "@/hooks";
 import { api } from "@/lib/api";
 import { registerDevice } from "@/lib/push";
 import { TAB_BAR_HEIGHT, tabBarBottom } from "@/lib/tabBar";
-import { useAuth } from "@/store/auth";
+import { isClubOnly, useAuth } from "@/store/auth";
 import { alpha, colors, radius, TIGHT_FONT_SCALE } from "@/theme";
 
 /** Red de seguridad por-pestaña: un throw en una pantalla de tab cae aquí, no tumba la app. */
@@ -126,6 +126,8 @@ export default function TabsLayout() {
   }, [token]);
 
   if (!token) return <Redirect href="/login" />;
+  // Staff sin jugador: las pestañas son del jugador (todas piden un Player vinculado).
+  if (isClubOnly(useAuth.getState().user)) return <Redirect href="/club" />;
 
   return (
     <Tabs

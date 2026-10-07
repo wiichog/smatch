@@ -17,7 +17,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { enterAppAfterLogin } from "@/lib/notifications";
-import { useAuth } from "@/store/auth";
+import { type ClubMembership, useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 // Mismo video del hero de la landing / login web (placeholder — reemplazar por
@@ -46,14 +46,14 @@ export default function Login() {
     setLoading(true);
     try {
       const data = await api.login(email.trim(), password);
-      if (!data.user?.players?.length) {
-        // Staff del club sin jugador vinculado: la app (por ahora) es del jugador. Se le
-        // dice a dónde ir en vez de un «no vinculado» que suena a error de su cuenta.
-        setError(
-          data.user?.memberships?.length
-            ? "Esta app es para jugadores. Para administrar tu club entra a www.smatchapp.mx."
-            : "Tu cuenta no está vinculada a ningún jugador. Pídele a tu club que te invite."
-        );
+      const memberships: ClubMembership[] = (data.user?.memberships ?? []).map((m: any) => ({
+        organization_id: m.organization_id,
+        organization_name: m.organization_name,
+        role: m.role,
+      }));
+      const players = data.user?.players ?? [];
+      if (!players.length && !memberships.length) {
+        setError("Tu cuenta no está vinculada a ningún jugador. Pídele a tu club que te invite.");
         return;
       }
       const email0 = data.user.email ?? "";
@@ -61,13 +61,21 @@ export default function Login() {
       // Un backend anterior manda el correo como nombre del jugador invitado: si es así,
       // se usa el nombre del jugador vinculado.
       const name =
-        sessionName && sessionName !== email0 ? sessionName : data.user.players[0]?.full_name ?? sessionName;
+        sessionName && sessionName !== email0 ? sessionName : players[0]?.full_name ?? sessionName;
       setSession(data.token, {
         id: data.user.id,
         email: email0,
         name,
         avatar_url: data.user.avatar_url ?? null,
+        players_count: players.length,
+        memberships,
       });
+      // Staff sin jugador (dueño, administrador): entra al modo club (fase 3, 2026-10).
+      // Antes se le cerraba la puerta con «esta app es para jugadores».
+      if (!players.length) {
+        router.replace("/club");
+        return;
+      }
       // Si la app la abrió un push sin sesión, entra directo a su destino. Una sola
       // navegación: dos hacia `(tabs)` en el mismo tick duplican el navegador.
       enterAppAfterLogin();

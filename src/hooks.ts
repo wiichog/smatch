@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   api,
+  type ClubToday,
   type DashboardData,
   type HistoryRow,
   type LeagueStandings,
@@ -142,6 +143,16 @@ export function useTournamentEnrollment(id: number | null) {
     onSuccess: refresh,
   });
   return { enroll, withdraw };
+}
+
+/** «Hoy en tu club» (modo club). */
+export function useClubToday(orgId: number | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<ClubToday>({
+    queryKey: ["club-today", orgId],
+    queryFn: () => api.clubToday(token!, orgId!),
+    enabled: !!token && orgId != null,
+  });
 }
 
 export function useHistory() {

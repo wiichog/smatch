@@ -3,11 +3,11 @@ import { ActivityIndicator, View } from "react-native";
 
 import { HOME_ROUTE } from "@/lib/routes";
 import { colors } from "@/theme";
-import { useAuth } from "@/store/auth";
+import { isClubOnly, useAuth } from "@/store/auth";
 
 /** Punto de entrada: espera hidratación y redirige según sesión. */
 export default function Index() {
-  const { token, hydrated } = useAuth();
+  const { token, hydrated, user } = useAuth();
 
   if (!hydrated) {
     return (
@@ -16,5 +16,7 @@ export default function Index() {
       </View>
     );
   }
-  return <Redirect href={token ? HOME_ROUTE : "/login"} />;
+  if (!token) return <Redirect href="/login" />;
+  // Staff sin jugador: su casa es el modo club.
+  return <Redirect href={isClubOnly(user) ? "/club" : HOME_ROUTE} />;
 }

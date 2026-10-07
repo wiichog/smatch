@@ -152,6 +152,24 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </GlassPressable>
 
+          {/* Modo club: solo si la cuenta es staff de algún club (fase 3, 2026-10). */}
+          {(user?.memberships?.length ?? 0) > 0 && (
+            <GlassPressable
+              onPress={() => router.push("/club")}
+              style={styles.reportRow}
+              accessibilityLabel="Modo club"
+            >
+              <View style={styles.reportIcon}>
+                <Ionicons name="business" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Modo club</Text>
+                <Muted>Hoy en {user?.memberships?.[0]?.organization_name ?? "tu club"}: jornadas, faltas y reservas.</Muted>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+            </GlassPressable>
+          )}
+
           {/* Mis reservas: lo apartado, cuánto toca pagar y cancelar */}
           <GlassPressable
             onPress={() => router.push("/reservas")}

@@ -199,6 +199,49 @@ export interface PlayerStats {
   moves: { up: number; down: number };
 }
 
+/** «Hoy en tu club» (`GET /api/v3/orgs/<id>/today/`): el modo club de la app. */
+export interface ClubToday {
+  club: { id: number; name: string; logo_url: string | null; is_demo: boolean };
+  /** Qué secciones le enseña el panel a esta membresía. */
+  sections: { leagues: boolean; rentals: boolean };
+  rounds: {
+    round_id: number;
+    league_id: number;
+    league: string;
+    number: number;
+    scheduled_at: string | null;
+    in_play: boolean;
+    courts: number;
+    players: number;
+    /** Dijeron «No voy». */
+    declined: number;
+    /** Lugares por cubrir con suplente. */
+    needs_substitute: { slot_id: number; court_number: number; position: string; player: string }[];
+    scores: { captured: number; total: number };
+  }[];
+  draft_rounds: { round_id: number; league_id: number; league: string; number: number }[];
+  open_disputes: {
+    id: number;
+    league: string;
+    round_number: number;
+    court_number: number;
+    match_number: number;
+    raised_by: string;
+    proposed: string;
+    created_at: string;
+  }[];
+  reservations: {
+    id: number;
+    court: string;
+    start_time: string;
+    end_time: string;
+    customer: string;
+    status: string;
+    payment_status: string;
+    total: string;
+  }[];
+}
+
 /** Un torneo en la lista del jugador (`GET /api/v2/me/tournaments/`). */
 export interface TournamentRow {
   id: number;
@@ -501,6 +544,7 @@ export const api = {
   roundResults: (token: string, roundId: number) =>
     request<RoundResults>(`/api/v2/rounds/${roundId}/results/`, { token }),
   myStats: (token: string) => request<PlayerStats>("/api/v2/me/stats/", { token }),
+  clubToday: (token: string, orgId: number) => request<ClubToday>(`/api/v3/orgs/${orgId}/today/`, { token }),
   myTournaments: (token: string) => request<{ tournaments: TournamentRow[] }>("/api/v2/me/tournaments/", { token }),
   tournament: (token: string, id: number) => request<TournamentDetail>(`/api/v2/tournaments/${id}/`, { token }),
   tournamentPartners: (token: string, id: number, q: string, category?: number | null) =>
