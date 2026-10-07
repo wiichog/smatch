@@ -103,6 +103,19 @@ export function roundWhen(
   return { day, time };
 }
 
+/**
+ * Cuándo se jugó algo, corto: «Hoy», «Ayer», «Jue 1 oct» (con el año si no es este).
+ * Recibe el `scheduled_at` de la jornada (ISO con hora) y lo lee en la hora del teléfono.
+ */
+export function playedDay(iso?: string | null, now: Date = new Date()): string {
+  const d = iso ? new Date(iso) : null;
+  if (!d || Number.isNaN(d.getTime())) return "";
+  if (sameDay(d, now)) return "Hoy";
+  if (sameDay(d, addDays(now, -1))) return "Ayer";
+  const base = `${DIAS_CORTOS[d.getDay()]} ${d.getDate()} ${MESES_CORTOS[d.getMonth()]}`;
+  return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
+}
+
 /** «600.00» → «$600»; «150.5» → «$150.50». Siempre pesos (la app no cobra en otra moneda). */
 export function money(amount?: string | number | null): string {
   const n = typeof amount === "number" ? amount : Number(amount);

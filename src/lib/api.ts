@@ -142,6 +142,20 @@ export interface HistoryRow {
   games_for: number;
   games_against: number;
   points_delta: number;
+  // --- Contexto (2026-10). Opcionales: un backend anterior no los manda. ---
+  round_id?: number;
+  league_id?: number;
+  league_name?: string;
+  scheduled_at?: string | null;
+  /** Un partido de americano puede acabar empatado en games (por tiempo). */
+  result?: "win" | "loss" | "draw";
+  /** De qué lado jugó (1 o 2): la impugnación se manda por lado absoluto. */
+  my_side?: 1 | 2 | null;
+  partner?: PersonBrief | null;
+  opponents?: PersonBrief[];
+  open_dispute_id?: number | null;
+  /** Qué pasó al cerrar la jornada; el mismo en todos sus partidos. */
+  round_movement?: { direction: Direction; from_court_number: number; to_court_number: number } | null;
 }
 
 export type Direction = "up" | "down" | "stay";
