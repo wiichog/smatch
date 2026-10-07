@@ -4,6 +4,7 @@ import {
   api,
   type DashboardData,
   type HistoryRow,
+  type LeagueStandings,
   type MyReservation,
   type NextRound,
   type Ranking,
@@ -38,6 +39,16 @@ export function useRankings() {
     queryKey: ["rankings"],
     queryFn: () => api.rankings(token!),
     enabled: !!token,
+  });
+}
+
+/** La tabla completa de una liga del jugador. Sin liga elegida no pide nada. */
+export function useLeagueStandings(leagueId: number | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<LeagueStandings>({
+    queryKey: ["standings", leagueId],
+    queryFn: () => api.leagueStandings(token!, leagueId!),
+    enabled: !!token && leagueId != null,
   });
 }
 

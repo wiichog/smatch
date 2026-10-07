@@ -111,6 +111,42 @@ export function Chip({ label, color }: { label: string; color: string }) {
 }
 
 /** Overline en MAYÚSCULAS con tracking — etiqueta de campo/dato. */
+/**
+ * Opción elegible en forma de pastilla (día, cancha, liga…): lima cuando está elegida.
+ * Mismo look que los chips de Reservar.
+ */
+export function SelectChip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        if (!selected) void Haptics.selectionAsync().catch(() => {});
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+    >
+      <View style={[styles.selectChip, selected && styles.selectChipOn]}>
+        <Text
+          maxFontSizeMultiplier={TIGHT_FONT_SCALE}
+          numberOfLines={1}
+          style={[styles.selectChipText, selected && styles.selectChipTextOn]}
+        >
+          {label}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export function Label({ children }: { children: ReactNode }) {
   return <Text style={styles.label} maxFontSizeMultiplier={MAX_FONT_SCALE}>{children}</Text>;
 }
@@ -136,6 +172,19 @@ export function Muted({
 }
 
 const styles = StyleSheet.create({
+  selectChip: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glassStrong,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 40,
+    justifyContent: "center",
+  },
+  selectChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  selectChipText: { color: colors.text, fontSize: 14, fontWeight: "700" },
+  selectChipTextOn: { color: colors.onPrimary },
   btn: {
     minHeight: 54,
     borderRadius: radius.full,

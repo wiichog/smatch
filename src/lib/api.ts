@@ -103,6 +103,35 @@ export interface Ranking {
   points: number;
   current_court_number: number | null;
   position: number;
+  /** Nombre del club (2026-10): distingue dos ligas homónimas de clubes distintos. */
+  club?: string;
+}
+
+/** Una fila de la tabla de la liga (`GET /api/v2/leagues/<id>/standings/`). */
+export interface StandingRow {
+  player_id: number;
+  name: string;
+  avatar_url: string | null;
+  points: number;
+  /** Los empates comparten lugar: 1, 1, 3… */
+  position: number;
+  court_number: number | null;
+  /** De la jornada más nueva a la más vieja, máximo 3. */
+  trend: Direction[];
+  is_me: boolean;
+}
+
+export interface LeagueStandings {
+  league: {
+    id: number;
+    name: string;
+    club: string;
+    logo_url: string | null;
+    rounds_closed: number;
+    last_closed_round: number | null;
+    remaining_rounds: number | null;
+  };
+  rows: StandingRow[];
 }
 
 export interface HistoryRow {
@@ -249,6 +278,8 @@ export const api = {
   profile: (token: string) => request<any>("/api/v2/me/profile/", { token }),
   dashboard: (token: string) => request<DashboardData>("/api/v2/me/dashboard/", { token }),
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
+  leagueStandings: (token: string, leagueId: number) =>
+    request<LeagueStandings>(`/api/v2/leagues/${leagueId}/standings/`, { token }),
   // `roundId` pide UNA jornada concreta: es lo que usa el deep link de un push, que
   // trae el id. Sin él, el servidor elige la más próxima del jugador.
   nextRound: (token: string, roundId?: number) =>

@@ -10,27 +10,13 @@ import { CourtBackdrop } from "@/components/CourtBackdrop";
 import { GlassCard, GlassPressable } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
 import { SectionHeader } from "@/components/SectionHeader";
+import { Trend } from "@/components/Trend";
 import { Label, Muted } from "@/components/ui";
 import { useDashboard, useMyReservations, useNextRound } from "@/hooks";
-import type { DashboardData, Direction, MyReservation } from "@/lib/api";
+import type { DashboardData, MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
-import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing, TIGHT_FONT_SCALE } from "@/theme";
-
-const TREND: Record<Direction, { symbol: string; color: string; said: string }> = {
-  up: { symbol: "↑", color: colors.success, said: "subiste de pista" },
-  down: { symbol: "↓", color: colors.danger, said: "bajaste de pista" },
-  stay: { symbol: "=", color: colors.textFaint, said: "te quedaste" },
-};
-
-/**
- * El backend manda la tendencia de la más reciente a la más vieja (3 como máximo); se
- * pinta al revés para leerse como una línea de tiempo: la última jornada queda a la
- * derecha, junto a los puntos.
- */
-function chronological(trend: Direction[] | undefined): Direction[] {
-  return [...(trend ?? [])].slice(0, 3).reverse();
-}
+import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Enrolled = DashboardData["enrolled_leagues"][number];
 type OpenTournament = DashboardData["open_tournaments"][number];
@@ -186,7 +172,15 @@ export default function DashboardScreen() {
                   {enrolled.map((l: Enrolled, i: number) => (
                     <View key={l.league_id}>
                       {i > 0 && <View style={styles.hairline} />}
-                      <View style={styles.leagueRow}>
+                      {/* La fila abre la tabla completa de esa liga en Ranking. */}
+                      <Pressable
+                        style={styles.leagueRow}
+                        onPress={() =>
+                          router.navigate({ pathname: "/(tabs)/ranking", params: { league_id: String(l.league_id) } })
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`${l.league_name}: lugar ${l.position}, ${l.points} puntos. Ver la tabla de la liga`}
+                      >
                         <View style={styles.posBadge}>
                           <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.posBadgeText}>#{l.position}</Text>
                         </View>
@@ -203,31 +197,15 @@ export default function DashboardScreen() {
                               {l.current_court_number != null ? `Pista ${l.current_court_number}` : "Sin pista"}
                               {l.remaining_rounds != null ? ` · faltan ${l.remaining_rounds} jornadas` : ""}
                             </Muted>
-                            {(l.trend ?? []).length > 0 && (
-                              <View
-                                style={{ flexDirection: "row", gap: 2 }}
-                                accessible
-                                accessibilityLabel={`Últimas jornadas: ${chronological(l.trend)
-                                  .map((d) => (TREND[d] ?? TREND.stay).said)
-                                  .join(", ")}`}
-                              >
-                                {chronological(l.trend).map((d: Direction, k: number) => {
-                                  const t = TREND[d] ?? TREND.stay;
-                                  return (
-                                    <Text maxFontSizeMultiplier={TIGHT_FONT_SCALE} key={k} style={{ color: t.color, fontWeight: "800", fontSize: 13 }}>
-                                      {t.symbol}
-                                    </Text>
-                                  );
-                                })}
-                              </View>
-                            )}
+                            <Trend trend={l.trend} />
                           </View>
                         </View>
                         <View style={{ alignItems: "flex-end" }}>
                           <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.points}>{l.points}</Text>
                           <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.pointsLabel}>PTS</Text>
                         </View>
-                      </View>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                      </Pressable>
                     </View>
                   ))}
                 </GlassCard>
