@@ -204,6 +204,8 @@ export interface ClubToday {
   club: { id: number; name: string; logo_url: string | null; is_demo: boolean };
   /** Qué secciones le enseña el panel a esta membresía. */
   sections: { leagues: boolean; rentals: boolean };
+  /** Admin u owner: enseña los botones (cubrir, capturar, cobrar, publicar). El Lector solo mira. */
+  can_edit?: boolean;
   rounds: {
     round_id: number;
     league_id: number;
@@ -213,8 +215,10 @@ export interface ClubToday {
     in_play: boolean;
     courts: number;
     players: number;
-    /** Dijeron «No voy». */
+    /** Dijeron «No voy» (cubiertos o no). */
     declined: number;
+    /** Lugares que ya juega un suplente. */
+    substitutes?: number;
     /** Lugares por cubrir con suplente. */
     needs_substitute: { slot_id: number; court_number: number; position: string; player: string }[];
     scores: { captured: number; total: number };
@@ -222,6 +226,8 @@ export interface ClubToday {
   draft_rounds: { round_id: number; league_id: number; league: string; number: number }[];
   open_disputes: {
     id: number;
+    round_id?: number;
+    match_id?: number;
     league: string;
     round_number: number;
     court_number: number;
@@ -241,6 +247,68 @@ export interface ClubToday {
     total: string;
   }[];
 }
+
+/** La jornada desde la cancha (`GET /api/v3/rounds/<id>/sheet/`), modo club. */
+export interface RoundSheet {
+  round: {
+    id: number;
+    league_id: number;
+    league: string;
+    number: number;
+    status: "draft" | "published" | "closed";
+    scheduled_at: string | null;
+    /** Publicada y sin cerrar: se capturan marcadores. */
+    accepts_results: boolean;
+  };
+  can_edit: boolean;
+  courts: {
+    court_number: number;
+    physical_court_number: number | null;
+    time_slot: string | null;
+    /** Ya tiene marcador: su alineación ya no se cambia. */
+    locked: boolean;
+    players: {
+      slot_id: number;
+      position: string;
+      player_id: number;
+      name: string;
+      avatar_url: string | null;
+      is_substitute: boolean;
+      /** A quién cubre, si juega de suplente. */
+      substitute_for: string | null;
+      /** Dijo «No voy». */
+      declined: boolean;
+    }[];
+    matches: SheetMatch[];
+  }[];
+}
+
+export interface SheetMatch {
+  id: number;
+  match_number: number;
+  team1: string[];
+  team2: string[];
+  score: { team1_games: number; team2_games: number; is_auto: boolean } | null;
+  dispute: { id: number; raised_by: string; proposed: string } | null;
+}
+
+/** Con quién cubrir un lugar (`GET /api/v3/rounds/<id>/substitute-candidates/`). */
+export interface SubstituteCandidates {
+  /** En borrador nadie se entera hasta publicar; publicada, el backend avisa. */
+  round_status?: "draft" | "published" | "closed";
+  slot: { slot_id: number; court_number: number; position: string; player: string; titular: string; category: string };
+  candidates: {
+    player_id: number;
+    name: string;
+    avatar_url: string | null;
+    category: string;
+    same_category: boolean;
+    in_league: boolean;
+    points: number | null;
+  }[];
+}
+
+export type PayMethod = "cash" | "card" | "transfer";
 
 /** Un torneo en la lista del jugador (`GET /api/v2/me/tournaments/`). */
 export interface TournamentRow {
@@ -545,6 +613,33 @@ export const api = {
     request<RoundResults>(`/api/v2/rounds/${roundId}/results/`, { token }),
   myStats: (token: string) => request<PlayerStats>("/api/v2/me/stats/", { token }),
   clubToday: (token: string, orgId: number) => request<ClubToday>(`/api/v3/orgs/${orgId}/today/`, { token }),
+  // Modo club: las lecturas del celular y las MISMAS rutas de escritura del panel.
+  roundSheet: (token: string, roundId: number) => request<RoundSheet>(`/api/v3/rounds/${roundId}/sheet/`, { token }),
+  substituteCandidates: (token: string, roundId: number, slotId: number, q: string) =>
+    request<SubstituteCandidates>(
+      `/api/v3/rounds/${roundId}/substitute-candidates/?slot_id=${slotId}&q=${encodeURIComponent(q)}`,
+      { token }
+    ),
+  assignSubstitute: (token: string, roundId: number, slotId: number, substituteId: number) =>
+    request<unknown>(`/api/v3/rounds/${roundId}/substitute/`, {
+      method: "POST",
+      token,
+      body: { slot_id: slotId, substitute_id: substituteId },
+    }),
+  captureScore: (token: string, matchId: number, team1: number, team2: number) =>
+    request<unknown>(`/api/v3/matches/${matchId}/result/`, {
+      method: "POST",
+      token,
+      body: { team1_games: team1, team2_games: team2 },
+    }),
+  publishRound: (token: string, roundId: number) =>
+    request<unknown>(`/api/v3/rounds/${roundId}/publish/`, { method: "POST", token }),
+  payReservation: (token: string, orgId: number, reservationId: number, method: PayMethod) =>
+    request<unknown>(`/api/v3/orgs/${orgId}/reservations/${reservationId}/pay/`, {
+      method: "POST",
+      token,
+      body: { method },
+    }),
   myTournaments: (token: string) => request<{ tournaments: TournamentRow[] }>("/api/v2/me/tournaments/", { token }),
   tournament: (token: string, id: number) => request<TournamentDetail>(`/api/v2/tournaments/${id}/`, { token }),
   tournamentPartners: (token: string, id: number, q: string, category?: number | null) =>

@@ -5,7 +5,10 @@
  * desde el celular y en la cancha, lo que tiene que resolver: qué jornadas vienen y qué
  * lugares hay que cubrir porque alguien dijo «No voy», cuántos marcadores faltan,
  * jornadas en borrador sin publicar, impugnaciones abiertas y las reservas de hoy.
- * Solo lectura: para actuar (asignar suplente, capturar, publicar) abre el panel.
+ *
+ * Y lo resuelve ahí mismo (si es dueño o supervisor; el Lector solo mira): cubrir un
+ * lugar con suplente, capturar marcadores y publicar un borrador desde la hoja de la
+ * jornada (`club/round/[id]`), y cobrar una reserva. Todo va a las mismas rutas del panel.
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,9 +22,11 @@ import { LoadError } from "@/components/LoadError";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Button, Label, Muted, Pill, SelectChip } from "@/components/ui";
-import { useClubToday } from "@/hooks";
-import type { ClubToday } from "@/lib/api";
+import { useToast } from "@/components/Toast";
+import { useClubActions, useClubToday } from "@/hooks";
+import type { ClubToday, PayMethod } from "@/lib/api";
 import { money, roundShort } from "@/lib/format";
+import { usePullRefresh } from "@/lib/pullRefresh";
 import { HOME_ROUTE } from "@/lib/routes";
 import { clearPendingRoute } from "@/lib/notifications";
 import { unregisterDevice } from "@/lib/push";
@@ -40,6 +45,7 @@ export default function ClubScreen() {
   const memberships = user?.memberships ?? [];
   const [orgId, setOrgId] = useState<number | null>(memberships[0]?.organization_id ?? null);
   const today = useClubToday(orgId);
+  const pull = usePullRefresh(today.refetch);
   const data = today.data;
   const role = memberships.find((m) => m.organization_id === orgId)?.role;
 
@@ -96,7 +102,7 @@ export default function ClubScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={today.isRefetching} onRefresh={today.refetch} tintColor={colors.primary} colors={[colors.primary]} />
+          <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
         {memberships.length > 1 && (
@@ -128,7 +134,7 @@ export default function ClubScreen() {
             onPress={() => Linking.openURL(PANEL_URL).catch(() => {})}
           />
           <Muted style={{ textAlign: "center" }}>
-            Asignar suplentes, capturar marcadores y publicar jornadas se hace en el panel.
+            Ligas, jugadores, torneos y caja se administran en el panel.
           </Muted>
           <Button title="Cerrar sesión" variant="glass" onPress={askSignOut} />
         </View>
@@ -137,10 +143,49 @@ export default function ClubScreen() {
   );
 }
 
+const PAY_METHODS: { method: PayMethod; label: string }[] = [
+  { method: "cash", label: "Efectivo" },
+  { method: "card", label: "Tarjeta" },
+  { method: "transfer", label: "Transferencia" },
+];
+
 function Today({ data }: { data: ClubToday }) {
+  const router = useRouter();
+  const toast = useToast();
+  const { pay } = useClubActions();
+  const canEdit = !!data.can_edit;
   const porCubrir = data.rounds.reduce((n, r) => n + r.needs_substitute.length, 0);
   let index = 0;
   const next = () => ++index;
+
+  const openRound = (roundId: number) => router.push({ pathname: "/club/round/[id]", params: { id: roundId } });
+  const cover = (roundId: number, slotId: number) =>
+    router.push({ pathname: "/club/suplente", params: { round: roundId, slot: slotId } });
+
+  function askPay(r: ClubToday["reservations"][number]) {
+    // Con un pago parcial se cobra solo lo que falta: el total ya no es lo que entra.
+    const partial = r.payment_status === "partial";
+    Alert.alert(
+      partial ? "Cobrar lo que falta" : `Cobrar ${money(r.total)}`,
+      `${r.court} · ${r.start_time}–${r.end_time}${r.customer ? ` · ${r.customer}` : ""}. ${
+        partial ? `Ya hay un pago parcial de los ${money(r.total)}; se cobra el resto` : "Se cobra completa"
+      } y entra a la caja si está abierta.`,
+      [
+        ...PAY_METHODS.map((m) => ({
+          text: m.label,
+          onPress: () =>
+            pay.mutate(
+              { orgId: data.club.id, reservationId: r.id, method: m.method },
+              {
+                onSuccess: () => toast.show(`Cobrada en ${m.label.toLowerCase()}.`),
+                onError: (e) => toast.show((e as Error).message || "No se pudo cobrar.", "error"),
+              }
+            ),
+        })),
+        { text: "Cancelar", style: "cancel" as const },
+      ]
+    );
+  }
 
   return (
     <>
@@ -160,7 +205,12 @@ function Today({ data }: { data: ClubToday }) {
           ) : (
             data.rounds.map((r) => (
               <GlassCard key={r.round_id} style={styles.card}>
-                <View style={styles.rowBetween}>
+                <Pressable
+                  onPress={() => openRound(r.round_id)}
+                  style={({ pressed }) => [styles.rowBetween, pressed && { opacity: 0.6 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${r.league}, jornada ${r.number}. Ver pistas y marcadores`}
+                >
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Label>{`${r.league} · Jornada ${r.number}`}</Label>
                     <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.when}>
@@ -168,11 +218,9 @@ function Today({ data }: { data: ClubToday }) {
                     </Text>
                   </View>
                   {r.in_play && <Pill label="En juego" tone="success" />}
-                </View>
-                <Muted>
-                  {r.courts} {r.courts === 1 ? "pista" : "pistas"} · {r.players} jugadores
-                  {r.declined ? ` · ${r.declined} no ${r.declined === 1 ? "va" : "van"}` : " · nadie ha avisado que falta"}
-                </Muted>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+                </Pressable>
+                <Muted>{roundFacts(r)}</Muted>
                 {r.needs_substitute.length > 0 && (
                   <View style={styles.subBox}>
                     <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.subTitle}>
@@ -184,6 +232,19 @@ function Today({ data }: { data: ClubToday }) {
                         <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.subText} numberOfLines={1}>
                           Pista {n.court_number} · {n.position} — {n.player}
                         </Text>
+                        {canEdit && (
+                          <Pressable
+                            onPress={() => cover(r.round_id, n.slot_id)}
+                            style={styles.coverBtn}
+                            hitSlop={6}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Cubrir el lugar de ${n.player}`}
+                          >
+                            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.coverText}>
+                              Cubrir
+                            </Text>
+                          </Pressable>
+                        )}
                       </View>
                     ))}
                   </View>
@@ -211,10 +272,21 @@ function Today({ data }: { data: ClubToday }) {
                   {data.draft_rounds.length === 1 ? "1 jornada en borrador" : `${data.draft_rounds.length} jornadas en borrador`}
                 </Text>
               </View>
-              <Muted>
-                {data.draft_rounds.map((d) => `${d.league} · J${d.number}`).join(", ")}. Los jugadores no las ven hasta
-                que las publiques.
-              </Muted>
+              <Muted>Los jugadores no las ven hasta que las publiques.{canEdit ? " Revísala y publícala desde aquí." : ""}</Muted>
+              {data.draft_rounds.map((d) => (
+                <Pressable
+                  key={d.round_id}
+                  onPress={() => openRound(d.round_id)}
+                  style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${d.league}, jornada ${d.number} en borrador. Revisar`}
+                >
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} numberOfLines={1} style={styles.linkText}>
+                    {d.league} · Jornada {d.number}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                </Pressable>
+              ))}
             </GlassCard>
           )}
 
@@ -226,12 +298,23 @@ function Today({ data }: { data: ClubToday }) {
               {data.open_disputes.map((d, i) => (
                 <View key={d.id}>
                   {i > 0 && <View style={styles.hairline} />}
-                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle}>
-                    {d.league} · J{d.round_number} · Pista {d.court_number} · Partido {d.match_number}
-                  </Text>
-                  <Muted>
-                    {d.raised_by ? `${d.raised_by} propone ${d.proposed}` : `Propuesto: ${d.proposed}`}
-                  </Muted>
+                  <Pressable
+                    onPress={d.round_id ? () => openRound(d.round_id!) : undefined}
+                    disabled={!d.round_id}
+                    style={({ pressed }) => [styles.disputeRow, pressed && { opacity: 0.6 }]}
+                    accessibilityRole={d.round_id ? "button" : undefined}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle}>
+                        {d.league} · J{d.round_number} · Pista {d.court_number} · Partido {d.match_number}
+                      </Text>
+                      <Muted>
+                        {d.raised_by ? `${d.raised_by} propone ${d.proposed}` : `Propuesto: ${d.proposed}`}. La deciden los
+                        jugadores de la pista.
+                      </Muted>
+                    </View>
+                    {!!d.round_id && <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />}
+                  </Pressable>
                 </View>
               ))}
             </GlassCard>
@@ -262,10 +345,24 @@ function Today({ data }: { data: ClubToday }) {
                         {r.start_time}–{r.end_time} · {money(r.total)}
                       </Muted>
                     </View>
-                    <Pill
-                      label={r.payment_status === "paid" ? "Pagada" : "Por cobrar"}
-                      tone={r.payment_status === "paid" ? "success" : "neutral"}
-                    />
+                    {r.payment_status === "paid" ? (
+                      <Pill label="Pagada" tone="success" />
+                    ) : canEdit && r.payment_status !== "refunded" ? (
+                      <Pressable
+                        onPress={() => askPay(r)}
+                        style={styles.payBtn}
+                        hitSlop={6}
+                        disabled={pay.isPending}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Cobrar ${money(r.total)} de ${r.court} a las ${r.start_time}`}
+                      >
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.payText}>
+                          Cobrar
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Pill label={r.payment_status === "refunded" ? "Reembolsada" : "Por cobrar"} tone="neutral" />
+                    )}
                   </View>
                 </View>
               ))}
@@ -287,6 +384,14 @@ function Today({ data }: { data: ClubToday }) {
       )}
     </>
   );
+}
+
+function roundFacts(r: ClubToday["rounds"][number]): string {
+  const parts = [`${r.courts} ${r.courts === 1 ? "pista" : "pistas"}`, `${r.players} jugadores`];
+  if (r.declined) parts.push(`${r.declined} no ${r.declined === 1 ? "va" : "van"}`);
+  if (r.substitutes) parts.push(`${r.substitutes} ${r.substitutes === 1 ? "suplente" : "suplentes"}`);
+  if (!r.declined && !r.substitutes) parts.push("nadie ha avisado que falta");
+  return parts.join(" · ");
 }
 
 type SummaryItem = { value: number; label: string; hint?: string; tone?: string };
@@ -355,7 +460,36 @@ const styles = StyleSheet.create({
   },
   subTitle: { color: colors.warning, fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
   subRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  subText: { flexShrink: 1, color: colors.text, fontSize: 14, fontWeight: "600" },
+  subText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: "600" },
+  coverBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: alpha(colors.warning, 0.18),
+    borderWidth: 1,
+    borderColor: alpha(colors.warning, 0.5),
+  },
+  coverText: { color: colors.warning, fontSize: 13, fontWeight: "800" },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  linkText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: "700" },
+  disputeRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  payBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    backgroundColor: alpha(colors.primary, 0.16),
+    borderWidth: 1,
+    borderColor: alpha(colors.primary, 0.5),
+  },
+  payText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
   progressRow: { gap: 4, marginTop: spacing.xs },
   progressTrack: { flexDirection: "row", height: 6, borderRadius: radius.full, overflow: "hidden", backgroundColor: colors.glassStrong },
   progressFill: { backgroundColor: colors.primary },

@@ -11,7 +11,10 @@ import {
   type PlayerStats,
   type Ranking,
   type RentalCourt,
+  type PayMethod,
   type RoundResults,
+  type RoundSheet,
+  type SubstituteCandidates,
   type TournamentDetail,
   type TournamentPartner,
   type TournamentRow,
@@ -153,6 +156,60 @@ export function useClubToday(orgId: number | null) {
     queryFn: () => api.clubToday(token!, orgId!),
     enabled: !!token && orgId != null,
   });
+}
+
+/** La jornada desde la cancha (modo club). */
+export function useRoundSheet(roundId: number | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<RoundSheet>({
+    queryKey: ["round-sheet", roundId],
+    queryFn: () => api.roundSheet(token!, roundId!),
+    enabled: !!token && roundId != null,
+  });
+}
+
+/** Con quién cubrir un lugar: sugeridos por nivel, o buscando por nombre. */
+export function useSubstituteCandidates(roundId: number | null, slotId: number | null, q: string) {
+  const token = useAuth((s) => s.token);
+  return useQuery<SubstituteCandidates>({
+    queryKey: ["substitute-candidates", roundId, slotId, q],
+    queryFn: () => api.substituteCandidates(token!, roundId!, slotId!, q),
+    enabled: !!token && roundId != null && slotId != null,
+  });
+}
+
+/**
+ * Lo que el club resuelve desde el celular. Cada acción refresca el «Hoy» y la hoja de
+ * la jornada: lo que se acaba de hacer se ve al volver, sin jalar para refrescar.
+ */
+export function useClubActions() {
+  const token = useAuth((s) => s.token);
+  const qc = useQueryClient();
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["club-today"] });
+    void qc.invalidateQueries({ queryKey: ["round-sheet"] });
+    void qc.invalidateQueries({ queryKey: ["substitute-candidates"] });
+  };
+  const substitute = useMutation({
+    mutationFn: (v: { roundId: number; slotId: number; substituteId: number }) =>
+      api.assignSubstitute(token!, v.roundId, v.slotId, v.substituteId),
+    onSuccess: refresh,
+  });
+  const capture = useMutation({
+    mutationFn: (v: { matchId: number; team1: number; team2: number }) =>
+      api.captureScore(token!, v.matchId, v.team1, v.team2),
+    onSuccess: refresh,
+  });
+  const publish = useMutation({
+    mutationFn: (roundId: number) => api.publishRound(token!, roundId),
+    onSuccess: refresh,
+  });
+  const pay = useMutation({
+    mutationFn: (v: { orgId: number; reservationId: number; method: PayMethod }) =>
+      api.payReservation(token!, v.orgId, v.reservationId, v.method),
+    onSuccess: refresh,
+  });
+  return { substitute, capture, publish, pay };
 }
 
 export function useHistory() {
