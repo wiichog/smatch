@@ -68,7 +68,8 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
       return { pathname: "/disputes", params: disputeId ? { dispute_id: disputeId } : undefined };
     }
 
-    // El torneo arrancó → su detalle (tus partidos y tu pareja). Sin id, Inicio.
+    // El torneo arrancó, o tu pareja te inscribió / te sacó → su detalle. Sin id, Inicio.
+    case "tournament_enrolled":
     case "tournament_activated": {
       const tournamentId = id(data.tournament_id);
       return tournamentId

@@ -215,6 +215,24 @@ export interface TournamentRow {
   partner: string | null;
 }
 
+/** Jugador del club para elegir pareja. `available` = no está ya en esa categoría. */
+export interface TournamentPartner {
+  player_id: number;
+  name: string;
+  avatar_url: string | null;
+  category: string | null;
+  available: boolean;
+}
+
+/** Respuesta de inscribirse. `whatsapp_url` para avisar a la pareja (si tiene teléfono). */
+export interface EnrollResult {
+  pair_id: number;
+  category: string;
+  partner: string;
+  partner_in_club: boolean;
+  whatsapp_url: string | null;
+}
+
 /** `GET /api/v2/tournaments/<id>/`. */
 export interface TournamentDetail {
   tournament: {
@@ -232,11 +250,22 @@ export interface TournamentDetail {
     time_slots: string[];
     match_duration_minutes: number | null;
     open_to_app: boolean;
+    /** Se puede inscribir desde la app (abierto a la app y armándose). */
+    enrollment_open?: boolean;
   };
   enrolled: boolean;
   my_category: string | null;
   partner: string | null;
-  categories: { id: number; name: string; registered_pairs: number; max_pairs: number | null; is_mine: boolean }[];
+  /** Todas sus inscripciones: puede jugar más de una categoría. */
+  my_entries?: { pair_id: number; category: string; partner: string; can_withdraw: boolean }[];
+  categories: {
+    id: number;
+    name: string;
+    registered_pairs: number;
+    max_pairs: number | null;
+    is_mine: boolean;
+    is_full?: boolean;
+  }[];
   matches: {
     id: number;
     category: string;
@@ -474,6 +503,22 @@ export const api = {
   myStats: (token: string) => request<PlayerStats>("/api/v2/me/stats/", { token }),
   myTournaments: (token: string) => request<{ tournaments: TournamentRow[] }>("/api/v2/me/tournaments/", { token }),
   tournament: (token: string, id: number) => request<TournamentDetail>(`/api/v2/tournaments/${id}/`, { token }),
+  tournamentPartners: (token: string, id: number, q: string, category?: number | null) =>
+    request<{ players: TournamentPartner[] }>(
+      `/api/v2/tournaments/${id}/partners/?q=${encodeURIComponent(q)}${category ? `&category=${category}` : ""}`,
+      { token }
+    ),
+  enrollTournament: (
+    token: string,
+    id: number,
+    body: { category: number; partner_id?: number; partner_name?: string; partner_phone?: string }
+  ) => request<EnrollResult>(`/api/v2/tournaments/${id}/enroll/`, { method: "POST", token, body }),
+  withdrawTournament: (token: string, id: number, pairId: number) =>
+    request<{ withdrawn: boolean }>(`/api/v2/tournaments/${id}/withdraw/`, {
+      method: "POST",
+      token,
+      body: { pair_id: pairId },
+    }),
   // `roundId` pide UNA jornada concreta: es lo que usa el deep link de un push, que
   // trae el id. Sin él, el servidor elige la más próxima del jugador.
   nextRound: (token: string, roundId?: number) =>

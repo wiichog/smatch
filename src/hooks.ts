@@ -12,6 +12,7 @@ import {
   type RentalCourt,
   type RoundResults,
   type TournamentDetail,
+  type TournamentPartner,
   type TournamentRow,
 } from "@/lib/api";
 import { useAuth } from "@/store/auth";
@@ -109,6 +110,38 @@ export function useTournament(id: number | null) {
     queryFn: () => api.tournament(token!, id!),
     enabled: !!token && id != null,
   });
+}
+
+/** Buscar pareja en el club (la búsqueda va con un respiro: no por cada tecla). */
+export function useTournamentPartners(id: number | null, q: string, category: number | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<{ players: TournamentPartner[] }>({
+    queryKey: ["tournament-partners", id, q, category],
+    queryFn: () => api.tournamentPartners(token!, id!, q, category),
+    enabled: !!token && id != null,
+    staleTime: 60_000,
+  });
+}
+
+/** Inscribirse o salirse: refresca el torneo y la lista de Inicio. */
+export function useTournamentEnrollment(id: number | null) {
+  const token = useAuth((s) => s.token);
+  const qc = useQueryClient();
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["tournament", id] });
+    void qc.invalidateQueries({ queryKey: ["tournaments"] });
+    void qc.invalidateQueries({ queryKey: ["tournament-partners", id] });
+  };
+  const enroll = useMutation({
+    mutationFn: (body: { category: number; partner_id?: number; partner_name?: string; partner_phone?: string }) =>
+      api.enrollTournament(token!, id!, body),
+    onSuccess: refresh,
+  });
+  const withdraw = useMutation({
+    mutationFn: (pairId: number) => api.withdrawTournament(token!, id!, pairId),
+    onSuccess: refresh,
+  });
+  return { enroll, withdraw };
 }
 
 export function useHistory() {

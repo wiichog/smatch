@@ -8,15 +8,16 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { GlassCard } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
-import { Label, Muted, Pill } from "@/components/ui";
-import { useTournament } from "@/hooks";
+import { useToast } from "@/components/Toast";
+import { Button, Label, Muted, Pill } from "@/components/ui";
+import { useTournament, useTournamentEnrollment } from "@/hooks";
 import type { TournamentDetail } from "@/lib/api";
 import { capitalize, hhmm, longDay, parseLocalDate, shortDate } from "@/lib/format";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
@@ -35,6 +36,23 @@ export default function TournamentScreen() {
   const tid = Number(id) > 0 ? Number(id) : null;
   const { data, isLoading, isError, error, refetch, isRefetching } = useTournament(tid);
   const t = data?.tournament;
+  const toast = useToast();
+  const { withdraw } = useTournamentEnrollment(tid);
+
+  function askWithdraw(pairId: number, category: string) {
+    Alert.alert("¿Cancelar la inscripción?", `Dejan de estar inscritos en ${category}. Tu pareja y tu club reciben aviso.`, [
+      { text: "No, mantenerla", style: "cancel" },
+      {
+        text: "Sí, cancelar",
+        style: "destructive",
+        onPress: () =>
+          withdraw.mutate(pairId, {
+            onSuccess: () => toast.show("Cancelaste la inscripción."),
+            onError: (e) => toast.show((e as Error).message || "No se pudo cancelar.", "error"),
+          }),
+      },
+    ]);
+  }
 
   return (
     <Screen
@@ -81,20 +99,50 @@ export default function TournamentScreen() {
             <GlassCard style={styles.mine}>
               {data.enrolled ? (
                 <>
-                  <Label>Tu inscripción</Label>
-                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.mineTitle}>
-                    {data.my_category ?? "Inscrito"}
-                    {data.partner ? ` · con ${data.partner}` : ""}
-                  </Text>
+                  <Label>{(data.my_entries?.length ?? 0) > 1 ? "Tus inscripciones" : "Tu inscripción"}</Label>
+                  {(data.my_entries ?? [{ pair_id: 0, category: data.my_category ?? "Inscrito", partner: data.partner ?? "", can_withdraw: false }]).map((e) => (
+                    <View key={e.pair_id} style={styles.entryRow}>
+                      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.mineTitle, { flex: 1 }]}>
+                        {e.category}
+                        {e.partner ? ` · con ${e.partner}` : ""}
+                      </Text>
+                      {e.can_withdraw && (
+                        <Pressable
+                          onPress={() => askWithdraw(e.pair_id, e.category)}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Cancelar la inscripción en ${e.category}`}
+                        >
+                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.withdraw}>Cancelar</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ))}
+                  {t.enrollment_open && <Muted>La inscripción se paga en el club.</Muted>}
+                </>
+              ) : t.enrollment_open ? (
+                <>
+                  <Label>¿Quieres jugarlo?</Label>
+                  <Muted>Inscríbete con tu pareja: quedan inscritos al momento y se paga en el club.</Muted>
                 </>
               ) : (
                 <>
                   <Label>¿Quieres jugarlo?</Label>
                   <Muted>
-                    La inscripción es por pareja y por ahora la hace tu club: avísale con quién
-                    juegas y en qué categoría.
+                    {t.status === "draft"
+                      ? "La inscripción de este torneo la hace tu club: avísale con quién juegas y en qué categoría."
+                      : "Las inscripciones de este torneo ya cerraron."}
                   </Muted>
                 </>
+              )}
+              {t.enrollment_open && (data.categories ?? []).some((c) => !c.is_mine) && (
+                <View style={{ marginTop: spacing.sm }}>
+                  <Button
+                    title={data.enrolled ? "Inscribirme en otra categoría" : "Inscribirme"}
+                    variant={data.enrolled ? "glass" : "primary"}
+                    onPress={() => router.push(`/inscripcion/${t.id}`)}
+                  />
+                </View>
               )}
             </GlassCard>
 
@@ -219,6 +267,8 @@ const styles = StyleSheet.create({
   datesText: { flexShrink: 1, color: colors.text, fontSize: 15, fontWeight: "700" },
   mine: { gap: spacing.xs },
   mineTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
+  entryRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  withdraw: { color: colors.danger, fontSize: 14, fontWeight: "700" },
   section: { marginTop: spacing.sm },
   list: { gap: spacing.xs, paddingVertical: spacing.sm },
   hairline: { height: 1, backgroundColor: colors.glassBorder, marginVertical: spacing.xs },
