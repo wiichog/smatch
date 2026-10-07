@@ -104,6 +104,23 @@ export function roundWhen(
 }
 
 /**
+ * Cuándo se juega una jornada, corto, para un renglón: «Mañana · 20:30», «Jue 9 oct ·
+ * 19:00». La hora sale de la tanda de la pista si la hay (como en `roundWhen`).
+ */
+export function roundShort(scheduledAt?: string | null, timeSlot?: string | null, now: Date = new Date()): string {
+  const d = scheduledAt ? new Date(scheduledAt) : null;
+  const valid = d && !Number.isNaN(d.getTime()) ? d : null;
+  let day = "";
+  if (valid) {
+    if (sameDay(valid, now)) day = "Hoy";
+    else if (sameDay(valid, addDays(now, 1))) day = "Mañana";
+    else day = `${DIAS_CORTOS[valid.getDay()]} ${valid.getDate()} ${MESES_CORTOS[valid.getMonth()]}`;
+  }
+  const time = hhmm(timeSlot) || (valid ? `${pad(valid.getHours())}:${pad(valid.getMinutes())}` : "");
+  return [day, time].filter(Boolean).join(" · ");
+}
+
+/**
  * Cuándo se jugó algo, corto: «Hoy», «Ayer», «Jue 1 oct» (con el año si no es este).
  * Recibe el `scheduled_at` de la jornada (ISO con hora) y lo lee en la hora del teléfono.
  */

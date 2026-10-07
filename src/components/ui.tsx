@@ -119,10 +119,16 @@ export function SelectChip({
   label,
   selected,
   onPress,
+  dot,
+  dotLabel,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
+  /** Punto ámbar de «algo pendiente» (p. ej. falta confirmar si vas). */
+  dot?: boolean;
+  /** Lo que el lector de pantalla dice del punto. */
+  dotLabel?: string;
 }) {
   return (
     <Pressable
@@ -132,9 +138,10 @@ export function SelectChip({
       }}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={label}
+      accessibilityLabel={dot && dotLabel ? `${label}, ${dotLabel}` : label}
     >
-      <View style={[styles.selectChip, selected && styles.selectChipOn]}>
+      <View style={[styles.selectChip, selected && styles.selectChipOn, dot && styles.selectChipWithDot]}>
+        {dot && <View style={[styles.chipDot, selected && { backgroundColor: colors.onPrimary }]} />}
         <Text
           maxFontSizeMultiplier={TIGHT_FONT_SCALE}
           numberOfLines={1}
@@ -241,6 +248,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   selectChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  selectChipWithDot: { flexDirection: "row", alignItems: "center", gap: 6 },
+  chipDot: { width: 7, height: 7, borderRadius: radius.full, backgroundColor: colors.warning },
   selectChipText: { color: colors.text, fontSize: 14, fontWeight: "700" },
   selectChipTextOn: { color: colors.onPrimary },
   btn: {

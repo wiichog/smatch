@@ -102,6 +102,23 @@ export interface NextRound {
     courtmates: { name: string; position: string; avatar_url: string | null }[];
     matches: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }[];
   } | null;
+  /**
+   * La jornada vigente de CADA liga del jugador (2026-10), la más próxima primero: quien
+   * juega en dos ligas ve y confirma las dos. Falta en un backend anterior.
+   */
+  upcoming?: UpcomingRound[];
+}
+
+export interface UpcomingRound {
+  round_id: number;
+  league_id: number;
+  league: string;
+  club: string;
+  round_number: number;
+  scheduled_at: string | null;
+  time_slot: string | null;
+  court_number: number;
+  availability: "available" | "unavailable" | "pending";
 }
 
 export interface Ranking {

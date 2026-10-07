@@ -14,7 +14,7 @@ import { Trend } from "@/components/Trend";
 import { Label, Muted } from "@/components/ui";
 import { useDashboard, useMyReservations, useNextRound } from "@/hooks";
 import type { DashboardData, MyReservation } from "@/lib/api";
-import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundWhen } from "@/lib/format";
+import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundShort, roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
@@ -146,6 +146,45 @@ export default function DashboardScreen() {
               {round.status === "published" && (
                 <AvailabilityPicker roundId={round.round_id} availability={round.availability} />
               )}
+              {/* Las otras ligas del jugador: antes su jornada no aparecía en ningún lado. */}
+              {(nextRound.data?.upcoming ?? [])
+                .filter((u) => u.round_id !== round.round_id)
+                .map((u) => {
+                  const pending = u.availability === "pending";
+                  const when = [roundShort(u.scheduled_at, u.time_slot), `Pista ${u.court_number}`]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <GlassPressable
+                      key={u.round_id}
+                      onPress={() =>
+                        router.navigate({ pathname: "/(tabs)/jornada", params: { round_id: String(u.round_id) } })
+                      }
+                      accessibilityLabel={`También juegas ${u.league}: ${when}${pending ? ". Falta confirmar si vas" : ""}`}
+                      style={styles.alsoRow}
+                    >
+                      <View style={styles.alsoIcon}>
+                        <Ionicons name="tennisball" size={18} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.alsoLabel}>TAMBIÉN JUEGAS</Text>
+                        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle} numberOfLines={1}>
+                          {u.league}
+                        </Text>
+                        <Muted numberOfLines={1}>{when}</Muted>
+                        {pending && (
+                          <View style={styles.alsoPending}>
+                            <Ionicons name="time-outline" size={14} color={colors.warning} />
+                            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.alsoPendingText}>
+                              Falta confirmar si vas
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                    </GlassPressable>
+                  );
+                })}
             </View>
           ) : (
             <GlassCard strong style={{ marginTop: spacing.lg }}>
@@ -176,7 +215,10 @@ export default function DashboardScreen() {
                       <Pressable
                         style={styles.leagueRow}
                         onPress={() =>
-                          router.navigate({ pathname: "/(tabs)/ranking", params: { league_id: String(l.league_id) } })
+                          router.navigate({
+                            pathname: "/(tabs)/ranking",
+                            params: { league_id: String(l.league_id), view: "table" },
+                          })
                         }
                         accessibilityRole="button"
                         accessibilityLabel={`${l.league_name}: lugar ${l.position}, ${l.points} puntos. Ver la tabla de la liga`}
@@ -358,6 +400,18 @@ function ReservationLine({ r }: { r: MyReservation }) {
 }
 
 const styles = StyleSheet.create({
+  alsoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  alsoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: alpha(colors.primary, 0.14),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alsoLabel: { color: colors.textFaint, fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  alsoPending: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  alsoPendingText: { color: colors.warning, fontSize: 13, fontWeight: "600" },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 120 },
   greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   overline: { width: 28, height: 3, borderRadius: 2, backgroundColor: colors.primary, marginBottom: 10 },

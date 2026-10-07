@@ -58,7 +58,7 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
     case "round_closed":
       return roundId
         ? { pathname: "/round/[roundId]", params: { roundId } }
-        : { pathname: "/(tabs)/ranking", params: leagueId ? { league_id: leagueId } : undefined };
+        : { pathname: "/(tabs)/ranking", params: leagueId ? { league_id: leagueId, view: "table" } : { view: "table" } };
 
     // Impugnación pendiente de tu voto → la lista de impugnaciones por votar, con la
     // del push resaltada (puede haber varias abiertas y de clubes distintos).

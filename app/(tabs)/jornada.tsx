@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,7 +23,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Screen } from "@/components/Screen";
 import { SponsorBanner } from "@/components/SponsorBanner";
 import { useToast } from "@/components/Toast";
-import { Button, Chip, Label, Muted, Pill } from "@/components/ui";
+import { Button, Chip, Label, Muted, Pill, SelectChip } from "@/components/ui";
 import { useNextRound } from "@/hooks";
 import { api, type PersonBrief } from "@/lib/api";
 import { roundWhen } from "@/lib/format";
@@ -31,11 +31,20 @@ import { useAuth } from "@/store/auth";
 import { colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 export default function JornadaScreen() {
-  // `round_id` llega cuando la pantalla la abrió un push (jornada publicada /
-  // recordatorio): entonces mostramos ESA jornada, no la que el servidor crea próxima.
+  // `round_id` dice qué jornada mostrar: la pone un push (jornada publicada /
+  // recordatorio), el renglón «También juegas» de Inicio o las pastillas de liga. Sin él,
+  // la que el servidor cree próxima. Es la ÚNICA fuente de verdad: con un estado local
+  // aparte, volver a tocar desde Inicio la liga que ya venía en la ruta no cambiaba
+  // nada y la pantalla se quedaba en la liga que el jugador había elegido después.
+  const router = useRouter();
   const { round_id } = useLocalSearchParams<{ round_id?: string }>();
   const roundId = Number(round_id) > 0 ? Number(round_id) : undefined;
   const { data, isLoading, refetch, isRefetching, isError, error } = useNextRound(roundId);
+  // Las ligas del selector salen de la consulta por defecto (la misma de Inicio): trae
+  // siempre la lista completa y no parpadea mientras carga la jornada elegida.
+  const all = useNextRound();
+  const upcoming = all.data?.upcoming ?? data?.upcoming ?? [];
+  const severalClubs = new Set(upcoming.map((u) => u.club)).size > 1;
   const round = data?.next_round;
   const me = useAuth((s) => s.user?.name) ?? "";
   const isMe = (name?: string | null) => !!me && !!name && name.trim() === me.trim();
@@ -57,12 +66,37 @@ export default function JornadaScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={refetch}
+            onRefresh={() => {
+              void refetch();
+              void all.refetch();
+            }}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
         }
       >
+        {/* Quien juega en dos ligas elige cuál ver; el punto ámbar marca dónde falta
+            decir si va. Antes solo aparecía la más próxima y la otra no se veía nunca. */}
+        {upcoming.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipsScroll}
+            contentContainerStyle={styles.chips}
+          >
+            {upcoming.map((u) => (
+              <SelectChip
+                key={u.round_id}
+                label={severalClubs ? `${u.league} · ${u.club}` : u.league}
+                selected={u.round_id === round?.round_id}
+                onPress={() => router.setParams({ round_id: String(u.round_id) })}
+                dot={u.availability === "pending"}
+                dotLabel="falta confirmar si vas"
+              />
+            ))}
+          </ScrollView>
+        )}
+
         <SponsorBanner />
 
         {isLoading ? (
@@ -291,6 +325,9 @@ function FeedbackSection({ roundId, index }: { roundId: number; index: number })
 }
 
 const styles = StyleSheet.create({
+  // Las pastillas de liga corren de borde a borde aunque el contenido tenga margen.
+  chipsScroll: { marginHorizontal: -spacing.lg, marginBottom: spacing.sm },
+  chips: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
   fbInput: {
     minHeight: 64,

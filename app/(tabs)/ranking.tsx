@@ -12,7 +12,7 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
@@ -37,25 +37,21 @@ const VIEWS: { value: View_; label: string }[] = [
 export default function RankingScreen() {
   // `league_id` llega del push de cierre de jornada («subiste/bajaste de pista»): abre
   // directo esa liga, que el jugador puede tener varias.
-  const { league_id } = useLocalSearchParams<{ league_id?: string }>();
+  // La liga y la vista viven en la ruta (`league_id`, `view`): las pone un push, el
+  // enlace de cada liga en Inicio, las pastillas o el selector. Con estado local aparte,
+  // volver a tocar desde Inicio la liga que ya venía en la ruta no la mostraba (el
+  // parámetro no cambiaba) y la pantalla se quedaba en «Mis partidos».
+  const router = useRouter();
+  const { league_id, view: viewParam } = useLocalSearchParams<{ league_id?: string; view?: string }>();
   const pushed = Number(league_id) > 0 ? Number(league_id) : null;
+  const view: View_ = viewParam === "matches" ? "matches" : "table";
   const rankings = useRankings();
   const leagues = rankings.data?.rankings ?? [];
 
-  const [picked, setPicked] = useState<number | null>(null);
-  const [view, setView] = useState<View_>("table");
-  // Un push o el enlace de Inicio piden una liga: se abre su TABLA aunque el jugador
-  // hubiera dejado la pestaña en «Mis partidos».
-  useEffect(() => {
-    if (pushed) {
-      setPicked(pushed);
-      setView("table");
-    }
-  }, [pushed]);
   // Se pide de una vez: así «Mis partidos» abre al instante y el pull-to-refresh lo tiene.
   const history = useHistory();
   const selected =
-    leagues.find((l) => l.league_id === picked)?.league_id ?? leagues[0]?.league_id ?? null;
+    leagues.find((l) => l.league_id === pushed)?.league_id ?? leagues[0]?.league_id ?? null;
 
   const standings = useLeagueStandings(selected);
   const [mode, setMode] = useState<Mode>("courts");
@@ -87,7 +83,7 @@ export default function RankingScreen() {
           options={VIEWS}
           value={view}
           onChange={(v) => {
-            setView(v);
+            router.setParams({ view: v });
             scrollRef.current?.scrollTo({ y: 0, animated: false });
           }}
         />
@@ -138,7 +134,7 @@ export default function RankingScreen() {
                     key={l.league_id}
                     label={chipLabel(l)}
                     selected={l.league_id === selected}
-                    onPress={() => setPicked(l.league_id)}
+                    onPress={() => router.setParams({ league_id: String(l.league_id) })}
                   />
                 ))}
               </ScrollView>
