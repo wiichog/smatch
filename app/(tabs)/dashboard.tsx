@@ -14,6 +14,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Trend } from "@/components/Trend";
 import { Label, Muted } from "@/components/ui";
 import { useDashboard, useMyReservations, useMyTournaments, useNextRound } from "@/hooks";
+import { usePullRefresh } from "@/lib/pullRefresh";
 import type { DashboardData, MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundShort, roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
@@ -25,9 +26,10 @@ type NearbyLeague = DashboardData["nearby_leagues"][number];
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { data, isLoading, refetch, isRefetching, isError, error } = useDashboard();
+  const { data, isLoading, refetch, isError, error } = useDashboard();
   const nextRound = useNextRound();
   const reservations = useMyReservations();
+  const pull = usePullRefresh(() => Promise.all([refetch(), nextRound.refetch(), reservations.refetch()]));
   const round = nextRound.data?.next_round;
   const user = useAuth((s) => s.user);
   const firstName = user?.name?.split(" ")[0] ?? "";
@@ -74,8 +76,8 @@ export default function DashboardScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching || nextRound.isRefetching || reservations.isRefetching}
-              onRefresh={retryAll}
+              refreshing={pull.refreshing}
+              onRefresh={pull.onRefresh}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />

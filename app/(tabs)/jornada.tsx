@@ -26,6 +26,7 @@ import { SponsorBanner } from "@/components/SponsorBanner";
 import { useToast } from "@/components/Toast";
 import { Button, Chip, Label, Muted, Pill, SelectChip } from "@/components/ui";
 import { useNextRound } from "@/hooks";
+import { usePullRefresh } from "@/lib/pullRefresh";
 import { api, type PersonBrief } from "@/lib/api";
 import { roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
@@ -40,10 +41,11 @@ export default function JornadaScreen() {
   const router = useRouter();
   const { round_id } = useLocalSearchParams<{ round_id?: string }>();
   const roundId = Number(round_id) > 0 ? Number(round_id) : undefined;
-  const { data, isLoading, refetch, isRefetching, isError, error } = useNextRound(roundId);
+  const { data, isLoading, refetch, isError, error } = useNextRound(roundId);
   // Las ligas del selector salen de la consulta por defecto (la misma de Inicio): trae
   // siempre la lista completa y no parpadea mientras carga la jornada elegida.
   const all = useNextRound();
+  const pull = usePullRefresh(() => Promise.all([refetch(), all.refetch()]));
   const upcoming = all.data?.upcoming ?? data?.upcoming ?? [];
   const severalClubs = new Set(upcoming.map((u) => u.club)).size > 1;
   const round = data?.next_round;
@@ -66,11 +68,8 @@ export default function JornadaScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => {
-              void refetch();
-              void all.refetch();
-            }}
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />

@@ -18,6 +18,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { useToast } from "@/components/Toast";
 import { Button, Label, Muted, Pill } from "@/components/ui";
 import { useTournament, useTournamentEnrollment } from "@/hooks";
+import { usePullRefresh } from "@/lib/pullRefresh";
 import type { TournamentDetail } from "@/lib/api";
 import { capitalize, hhmm, longDay, parseLocalDate, shortDate } from "@/lib/format";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
@@ -34,7 +35,8 @@ export default function TournamentScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const tid = Number(id) > 0 ? Number(id) : null;
-  const { data, isLoading, isError, error, refetch, isRefetching } = useTournament(tid);
+  const { data, isLoading, isError, error, refetch } = useTournament(tid);
+  const pull = usePullRefresh(refetch);
   const t = data?.tournament;
   const toast = useToast();
   const { withdraw } = useTournamentEnrollment(tid);
@@ -68,7 +70,7 @@ export default function TournamentScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
+          <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
         {isLoading ? (

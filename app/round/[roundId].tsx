@@ -18,6 +18,7 @@ import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Label, Muted, Pill } from "@/components/ui";
 import { useRoundResults } from "@/hooks";
+import { usePullRefresh } from "@/lib/pullRefresh";
 import type { RoundMove, RoundResultPlayer, RoundResults } from "@/lib/api";
 import { hhmm, playedDay } from "@/lib/format";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
@@ -33,7 +34,8 @@ export default function RoundResultsScreen() {
   const router = useRouter();
   const { roundId } = useLocalSearchParams<{ roundId: string }>();
   const id = Number(roundId) > 0 ? Number(roundId) : null;
-  const { data, isLoading, isError, error, refetch, isRefetching } = useRoundResults(id);
+  const { data, isLoading, isError, error, refetch } = useRoundResults(id);
+  const pull = usePullRefresh(refetch);
 
   const me = useMemo(() => findMe(data), [data]);
   const myCourt = me?.kind === "court" ? me.court.court_number : null;
@@ -75,7 +77,7 @@ export default function RoundResultsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
+          <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
         {isLoading ? (

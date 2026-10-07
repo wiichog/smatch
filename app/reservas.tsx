@@ -13,6 +13,7 @@ import { Screen } from "@/components/Screen";
 import { useToast } from "@/components/Toast";
 import { Button, Muted, Pill } from "@/components/ui";
 import { useCancelReservation, useMyReservations } from "@/hooks";
+import { usePullRefresh } from "@/lib/pullRefresh";
 import type { MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, parseLocalDate, relativeDay, shortDate } from "@/lib/format";
 import { colors, MAX_FONT_SCALE, spacing } from "@/theme";
@@ -20,7 +21,8 @@ import { colors, MAX_FONT_SCALE, spacing } from "@/theme";
 export default function ReservasScreen() {
   const router = useRouter();
   const toast = useToast();
-  const { data, isLoading, refetch, isRefetching, error } = useMyReservations();
+  const { data, isLoading, refetch, error } = useMyReservations();
+  const pull = usePullRefresh(refetch);
   const cancel = useCancelReservation();
   const upcoming = data?.upcoming ?? [];
   const past = data?.past ?? [];
@@ -58,7 +60,7 @@ export default function ReservasScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
+          <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
         {isLoading ? (

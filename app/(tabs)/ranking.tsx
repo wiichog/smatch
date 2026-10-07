@@ -23,6 +23,7 @@ import { MyMatches } from "@/components/MyMatches";
 import { Trend, trendLabel } from "@/components/Trend";
 import { Label, Muted, Pill, Segmented, SelectChip } from "@/components/ui";
 import { useHistory, useLeagueStandings, useRankings } from "@/hooks";
+import { usePullRefresh } from "@/lib/pullRefresh";
 import type { LeagueStandings, Ranking, StandingRow } from "@/lib/api";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
@@ -54,6 +55,9 @@ export default function RankingScreen() {
     leagues.find((l) => l.league_id === pushed)?.league_id ?? leagues[0]?.league_id ?? null;
 
   const standings = useLeagueStandings(selected);
+  const pull = usePullRefresh(() =>
+    view === "matches" ? history.refetch() : Promise.all([rankings.refetch(), standings.refetch()])
+  );
   const [mode, setMode] = useState<Mode>("courts");
 
   // Dónde quedó tu pista (vista por pista) y tu fila (vista por puntos), para el atajo
@@ -94,15 +98,8 @@ export default function RankingScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={view === "table" ? rankings.isRefetching || standings.isRefetching : history.isRefetching}
-            onRefresh={() => {
-              if (view === "matches") {
-                void history.refetch();
-                return;
-              }
-              void rankings.refetch();
-              void standings.refetch();
-            }}
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
