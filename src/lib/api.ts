@@ -66,6 +66,13 @@ async function request<T>(
 
 // --- Tipos del jugador (api/v2) ---
 /** Persona en un payload móvil: nombre + avatar (URL de foto o null → iniciales). */
+/** Cancha que el club renta desde la app (`GET /api/v2/rentals/courts/`). */
+export interface RentalCourt {
+  id: number;
+  name: string;
+  price_per_slot?: string | number | null;
+}
+
 export interface PersonBrief {
   name: string;
   avatar_url: string | null;
@@ -390,7 +397,7 @@ export const api = {
     ),
 
   // --- Renta de canchas (ticket #30) ---
-  rentalCourts: (token: string) => request<{ courts: any[] }>("/api/v2/rentals/courts/", { token }),
+  rentalCourts: (token: string) => request<{ courts: RentalCourt[] }>("/api/v2/rentals/courts/", { token }),
   courtFreeSlots: (token: string, courtId: number, date: string) =>
     request<{ date: string; slots: FreeSlot[] }>(
       `/api/v2/rentals/courts/${courtId}/free-slots/?date=${date}`,

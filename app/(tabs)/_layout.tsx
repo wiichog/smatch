@@ -7,8 +7,10 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppErrorFallback } from "@/components/AppErrorFallback";
+import { useRentalCourts } from "@/hooks";
 import { api } from "@/lib/api";
 import { registerDevice } from "@/lib/push";
+import { TAB_BAR_HEIGHT, tabBarBottom } from "@/lib/tabBar";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, radius, TIGHT_FONT_SCALE } from "@/theme";
 
@@ -33,24 +35,27 @@ type FloatingTabBarProps = {
 };
 
 type IconName = keyof typeof Ionicons.glyphMap;
-const TABS: { name: string; label: string; icon: IconName }[] = [
+type Tab = { name: string; label: string; icon: IconName };
+// Fase 2 (2026-10): Ranking + Historial se juntaron en «Liga» (la ruta sigue siendo
+// `ranking`) para darle su pestaña a Reservar, que antes vivía escondida en Perfil.
+const TABS: Tab[] = [
   { name: "dashboard", label: "Inicio", icon: "home" },
   { name: "jornada", label: "Jornada", icon: "tennisball" },
-  { name: "ranking", label: "Ranking", icon: "trophy" },
-  { name: "history", label: "Historial", icon: "time" },
+  { name: "ranking", label: "Liga", icon: "trophy" },
+  { name: "reservar", label: "Reservar", icon: "calendar" },
   { name: "profile", label: "Perfil", icon: "person" },
 ];
 
 /** Barra de pestañas flotante de vidrio (blur iOS): la pestaña activa se resalta con
  * una pastilla lima tenue; háptica de selección al cambiar. Respeta el safe-area. */
-function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
+function FloatingTabBar({ state, navigation, tabs }: FloatingTabBarProps & { tabs: Tab[] }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.wrap, { bottom: (insets.bottom || 10) + 6 }]} pointerEvents="box-none">
+    <View style={[styles.wrap, { bottom: tabBarBottom(insets.bottom) }]} pointerEvents="box-none">
       <BlurView intensity={40} tint="dark" style={styles.bar}>
         <View style={styles.overlay} />
         <View style={styles.row}>
-          {TABS.map((tab) => {
+          {tabs.map((tab) => {
             const idx = state.routes.findIndex((r: { name: string }) => r.name === tab.name);
             const active = state.index === idx;
             return (
@@ -88,6 +93,12 @@ function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
 
 export default function TabsLayout() {
   const token = useAuth((s) => s.token);
+  // «Reservar» solo si el club renta canchas desde la app (con el módulo apagado el
+  // backend manda la lista vacía). Mientras no se sabe, no se muestra: aparecer tarde
+  // es menos raro que desaparecer.
+  const rental = useRentalCourts();
+  const rents = (rental.data?.courts.length ?? 0) > 0;
+  const tabs = rents ? TABS : TABS.filter((t) => t.name !== "reservar");
 
   // Registrar el dispositivo para push cuando hay sesión (best-effort).
   useEffect(() => {
@@ -118,20 +129,20 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => <FloatingTabBar {...props} tabs={tabs} />}
       screenOptions={{ headerShown: false, animation: "shift" }}
     >
       <Tabs.Screen name="dashboard" />
       <Tabs.Screen name="jornada" />
       <Tabs.Screen name="ranking" />
-      <Tabs.Screen name="history" />
+      <Tabs.Screen name="reservar" />
       <Tabs.Screen name="profile" />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: "absolute", left: 14, right: 14, height: 66 },
+  wrap: { position: "absolute", left: 14, right: 14, height: TAB_BAR_HEIGHT },
   bar: {
     position: "absolute",
     top: 0,

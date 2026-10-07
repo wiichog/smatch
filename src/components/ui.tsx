@@ -147,6 +147,51 @@ export function SelectChip({
   );
 }
 
+/**
+ * Control segmentado de 2–3 vistas («Tabla | Mis partidos»): una pastilla de vidrio
+ * con la opción elegida en lima. Para cambiar de VISTA dentro de una pantalla; para
+ * elegir un valor (día, cancha, liga) va `SelectChip`.
+ */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={styles.segmented} accessibilityRole="tablist">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            style={[styles.segment, on && styles.segmentOn]}
+            onPress={() => {
+              if (on) return;
+              void Haptics.selectionAsync().catch(() => {});
+              onChange(o.value);
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={o.label}
+          >
+            <Text
+              maxFontSizeMultiplier={TIGHT_FONT_SCALE}
+              numberOfLines={1}
+              style={[styles.segmentText, on && styles.segmentTextOn]}
+            >
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function Label({ children }: { children: ReactNode }) {
   return <Text style={styles.label} maxFontSizeMultiplier={MAX_FONT_SCALE}>{children}</Text>;
 }
@@ -172,6 +217,19 @@ export function Muted({
 }
 
 const styles = StyleSheet.create({
+  segmented: {
+    flexDirection: "row",
+    padding: 3,
+    gap: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glassStrong,
+  },
+  segment: { flex: 1, minHeight: 36, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
+  segmentOn: { backgroundColor: colors.primary },
+  segmentText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
+  segmentTextOn: { color: colors.onPrimary },
   selectChip: {
     borderRadius: radius.full,
     borderWidth: 1,

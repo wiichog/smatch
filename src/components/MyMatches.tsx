@@ -1,19 +1,20 @@
 /**
- * Historial (fase 2, 2026-10): jornada por jornada, con quién jugaste, contra quién,
+ * «Mis partidos» (fase 2, 2026-10): jornada por jornada, con quién jugaste, contra quién,
  * cómo terminó cada partido y qué pasó al cerrar la jornada.
  *
- * Antes era una lista de «Jornada 4 · Pista 2 · 6-3»: sin liga, sin fecha y sin un solo
- * nombre, así que nadie recordaba de qué partido se trataba.
+ * Antes era la pestaña Historial, una lista de «Jornada 4 · Pista 2 · 6-3» sin liga,
+ * fecha ni un solo nombre. Ahora vive dentro de Liga, junto a la tabla («Tabla | Mis
+ * partidos»), para dejarle su pestaña a Reservar. Es un bloque sin pantalla ni scroll
+ * propios: lo pinta el ScrollView de Liga.
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { GlassCard } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
-import { Screen } from "@/components/Screen";
 import { Label, Muted, Pill } from "@/components/ui";
 import { useHistory } from "@/hooks";
 import type { HistoryRow } from "@/lib/api";
@@ -33,40 +34,31 @@ type Group = {
   matches: HistoryRow[];
 };
 
-export default function HistoryScreen() {
-  const { data, isLoading, refetch, isRefetching, isError, error } = useHistory();
+export function MyMatches() {
+  const { data, isLoading, refetch, isError, error } = useHistory();
   const groups = useMemo(() => groupByRound(data?.history ?? []), [data]);
 
+  if (isLoading) return <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />;
+  if (isError && !data) {
+    return <LoadError error={error} onRetry={() => void refetch()} style={{ marginTop: spacing.md }} />;
+  }
+  if (groups.length === 0) {
+    return (
+      <GlassCard style={styles.empty}>
+        <Ionicons name="time-outline" size={38} color={colors.textMuted} />
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>Todavía sin partidos</Text>
+        <Muted style={{ textAlign: "center" }}>
+          Cuando tu club capture los marcadores de tu primera jornada, aquí verás cada partido.
+        </Muted>
+      </GlassCard>
+    );
+  }
   return (
-    <Screen title="Historial" subtitle="Tus partidos, jornada por jornada">
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
-        }
-      >
-        {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
-        ) : isError && !data ? (
-          <LoadError error={error} onRetry={() => void refetch()} style={{ marginTop: spacing.md }} />
-        ) : groups.length === 0 ? (
-          <GlassCard style={styles.empty}>
-            <Ionicons name="time-outline" size={38} color={colors.textMuted} />
-            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>Todavía sin partidos</Text>
-            <Muted style={{ textAlign: "center" }}>
-              Cuando tu club capture los marcadores de tu primera jornada, aquí verás cada partido.
-            </Muted>
-          </GlassCard>
-        ) : (
-          <View style={{ gap: spacing.md, marginTop: spacing.sm }}>
-            {groups.map((g) => (
-              <RoundCard key={g.key} group={g} />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </Screen>
+    <View style={{ gap: spacing.md, marginTop: spacing.md }}>
+      {groups.map((g) => (
+        <RoundCard key={g.key} group={g} />
+      ))}
+    </View>
   );
 }
 
@@ -248,7 +240,6 @@ function toneFor(n: number): string {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
   empty: { marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.xl, gap: 8 },
   emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
   card: { gap: spacing.sm },

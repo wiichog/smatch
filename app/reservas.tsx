@@ -76,7 +76,7 @@ export default function ReservasScreen() {
               <GlassCard style={styles.empty}>
                 <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
                 <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>No tienes reservas próximas</Text>
-                <Button title="Reservar cancha" onPress={() => router.replace("/reservar")} />
+                <Button title="Reservar cancha" onPress={() => router.navigate("/reservar")} />
               </GlassCard>
             ) : (
               upcoming.map((r) => (

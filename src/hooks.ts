@@ -9,6 +9,7 @@ import {
   type NextRound,
   type PlayerStats,
   type Ranking,
+  type RentalCourt,
   type RoundResults,
 } from "@/lib/api";
 import { useAuth } from "@/store/auth";
@@ -71,6 +72,21 @@ export function useMyStats() {
     queryKey: ["stats"],
     queryFn: () => api.myStats(token!),
     enabled: !!token,
+  });
+}
+
+/**
+ * Canchas que el club del jugador renta desde la app. La comparten la pantalla de
+ * Reservar y la barra de pestañas, que esconde «Reservar» si la lista viene vacía.
+ */
+export function useRentalCourts() {
+  const token = useAuth((s) => s.token);
+  return useQuery<{ courts: RentalCourt[] }>({
+    queryKey: ["rental-courts"],
+    queryFn: () => api.rentalCourts(token!),
+    enabled: !!token,
+    // Que un club abra o cierre la renta pasa muy de vez en cuando.
+    staleTime: 5 * 60_000,
   });
 }
 

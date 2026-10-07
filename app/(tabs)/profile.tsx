@@ -152,22 +152,6 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </GlassPressable>
 
-          {/* Reservar cancha */}
-          <GlassPressable
-            onPress={() => router.push("/reservar")}
-            style={styles.reportRow}
-            accessibilityLabel="Reservar cancha"
-          >
-            <View style={styles.reportIcon}>
-              <Ionicons name="tennisball" size={20} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Reservar cancha</Text>
-              <Muted>Aparta una cancha y divide el costo con tus amigos.</Muted>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-          </GlassPressable>
-
           {/* Mis reservas: lo apartado, cuánto toca pagar y cancelar */}
           <GlassPressable
             onPress={() => router.push("/reservas")}

@@ -1,10 +1,14 @@
 /**
- * La tabla de la liga (fase 2, 2026-10).
+ * Pestaña «Liga» (fase 2, 2026-10): la tabla de la liga y tus partidos.
  *
- * Antes esta pestaña solo decía «#13 · 0 pts»: el jugador no veía contra quién competía,
- * quién estaba en su pista ni a cuántos puntos tenía al de arriba. Ahora arriba va su
- * lugar, y abajo la liga entera pista por pista (así se juega: se sube y se baja de
- * pista) o por puntos, con su fila resaltada.
+ * Antes esta pestaña se llamaba Ranking y solo decía «#13 · 0 pts»: el jugador no veía
+ * contra quién competía, quién estaba en su pista ni a cuántos puntos tenía al de
+ * arriba. Ahora «Tabla» trae su lugar arriba y la liga entera pista por pista (así se
+ * juega: se sube y se baja de pista) o por puntos; «Mis partidos» es el antiguo
+ * Historial, que se mudó aquí para dejarle su pestaña a Reservar.
+ *
+ * El archivo sigue llamándose `ranking.tsx`: la ruta `/(tabs)/ranking` es el destino
+ * de respaldo del push de cierre de jornada y del enlace de cada liga en Inicio.
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -15,13 +19,20 @@ import { Avatar } from "@/components/Avatar";
 import { GlassCard } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
 import { Screen } from "@/components/Screen";
+import { MyMatches } from "@/components/MyMatches";
 import { Trend, trendLabel } from "@/components/Trend";
-import { Label, Muted, Pill, SelectChip } from "@/components/ui";
-import { useLeagueStandings, useRankings } from "@/hooks";
+import { Label, Muted, Pill, Segmented, SelectChip } from "@/components/ui";
+import { useHistory, useLeagueStandings, useRankings } from "@/hooks";
 import type { LeagueStandings, Ranking, StandingRow } from "@/lib/api";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Mode = "courts" | "points";
+type View_ = "table" | "matches";
+
+const VIEWS: { value: View_; label: string }[] = [
+  { value: "table", label: "Tabla" },
+  { value: "matches", label: "Mis partidos" },
+];
 
 export default function RankingScreen() {
   // `league_id` llega del push de cierre de jornada («subiste/bajaste de pista»): abre
@@ -32,9 +43,17 @@ export default function RankingScreen() {
   const leagues = rankings.data?.rankings ?? [];
 
   const [picked, setPicked] = useState<number | null>(null);
+  const [view, setView] = useState<View_>("table");
+  // Un push o el enlace de Inicio piden una liga: se abre su TABLA aunque el jugador
+  // hubiera dejado la pestaña en «Mis partidos».
   useEffect(() => {
-    if (pushed) setPicked(pushed);
+    if (pushed) {
+      setPicked(pushed);
+      setView("table");
+    }
   }, [pushed]);
+  // Se pide de una vez: así «Mis partidos» abre al instante y el pull-to-refresh lo tiene.
+  const history = useHistory();
   const selected =
     leagues.find((l) => l.league_id === picked)?.league_id ?? leagues[0]?.league_id ?? null;
 
@@ -58,15 +77,33 @@ export default function RankingScreen() {
   const chipLabel = (l: Ranking) => (severalClubs && l.club ? `${l.league_name} · ${l.club}` : l.league_name);
 
   return (
-    <Screen title="Ranking" subtitle="La tabla de tu liga">
+    <Screen
+      title="Liga"
+      subtitle={view === "table" ? "La tabla de tu liga" : "Tus partidos, jornada por jornada"}
+    >
+      {/* Fijo arriba: cambiar de vista no obliga a regresar al principio de la lista. */}
+      <View style={styles.viewSwitch}>
+        <Segmented
+          options={VIEWS}
+          value={view}
+          onChange={(v) => {
+            setView(v);
+            scrollRef.current?.scrollTo({ y: 0, animated: false });
+          }}
+        />
+      </View>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={rankings.isRefetching || standings.isRefetching}
+            refreshing={view === "table" ? rankings.isRefetching || standings.isRefetching : history.isRefetching}
             onRefresh={() => {
+              if (view === "matches") {
+                void history.refetch();
+                return;
+              }
               void rankings.refetch();
               void standings.refetch();
             }}
@@ -75,7 +112,9 @@ export default function RankingScreen() {
           />
         }
       >
-        {rankings.isLoading ? (
+        {view === "matches" ? (
+          <MyMatches />
+        ) : rankings.isLoading ? (
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
         ) : rankings.isError && !rankings.data ? (
           <LoadError error={rankings.error} onRetry={() => void rankings.refetch()} style={{ marginTop: spacing.md }} />
@@ -395,6 +434,7 @@ function byCourt(rows: StandingRow[]): { court: number | null; rows: StandingRow
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
+  viewSwitch: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm },
   empty: { marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.xl, gap: 8 },
   emptyTitle: { fontWeight: "800", color: colors.text, fontSize: 16 },
   // Las pastillas de liga corren de borde a borde aunque el contenido tenga margen.

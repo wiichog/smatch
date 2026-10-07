@@ -3,11 +3,14 @@
  * divide el costo; a los invitados les avisa por WhatsApp. Se paga EN EL CLUB: la app
  * todavía no cobra con tarjeta, y ofrecer «pagar ahora» sin pedir una tarjeta dejaba la
  * reserva pendiente y el cron la cancelaba dos horas antes del juego.
+ *
+ * Es pestaña desde 2026-10 (antes una pantalla escondida en Perfil). La barra la esconde
+ * si el club no renta canchas; la ruta sigue siendo `/reservar`.
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -20,10 +23,15 @@ import {
 } from "react-native";
 
 import { GlassCard } from "@/components/Glass";
+import { LoadError } from "@/components/LoadError";
 import { Screen } from "@/components/Screen";
 import { Button, Label, Muted } from "@/components/ui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { useRentalCourts } from "@/hooks";
 import { api, type FreeSlot } from "@/lib/api";
 import { capitalize, duration, hhmm, isoDate, longDay, money, nextDays, shortDayLabel } from "@/lib/format";
+import { TAB_BAR_HEIGHT, tabBarBottom } from "@/lib/tabBar";
 import { useAuth } from "@/store/auth";
 import { colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
@@ -37,8 +45,9 @@ export default function ReservarScreen() {
   const queryClient = useQueryClient();
   const token = useAuth((s) => s.token);
   const days = useMemo(() => nextDays(DAYS_AHEAD), []);
-  const [courts, setCourts] = useState<any[]>([]);
-  const [loadingCourts, setLoadingCourts] = useState(true);
+  const rental = useRentalCourts();
+  const courts = rental.data?.courts ?? [];
+  const loadingCourts = rental.isLoading;
   const [courtId, setCourtId] = useState<number | null>(null);
   const [day, setDay] = useState<Date>(days[0]);
   const [slots, setSlots] = useState<FreeSlot[]>([]);
@@ -48,20 +57,22 @@ export default function ReservarScreen() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Sube al apartar: vuelve a pedir los horarios (el que se apartó ya no está libre).
+  const [reload, setReload] = useState(0);
+  // Al elegir el PRIMER horario, la pantalla baja sola al resumen (precio y duración):
+  // el resumen nace debajo de los horarios, fuera de la vista.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollToSummary = useRef(false);
+  // El botón de apartar va fijo encima de la barra de pestañas: dentro del scroll se
+  // quedaba debajo de ella en cuanto la pantalla crecía (al agregar jugadores).
+  const insets = useSafeAreaInsets();
+  const footerBottom = tabBarBottom(insets.bottom) + TAB_BAR_HEIGHT + spacing.sm;
 
+  // La primera cancha va preseleccionada (con una sola no hay nada que elegir).
+  const firstCourtId = courts[0]?.id ?? null;
   useEffect(() => {
-    if (!token) return;
-    api
-      .rentalCourts(token)
-      .then((r) => {
-        const list = r.courts ?? [];
-        setCourts(list);
-        // Con una sola cancha no hay nada que elegir: se preselecciona.
-        if (list.length > 0) setCourtId((id) => id ?? list[0].id);
-      })
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setLoadingCourts(false));
-  }, [token]);
+    if (firstCourtId != null) setCourtId((id) => id ?? firstCourtId);
+  }, [firstCourtId]);
 
   // Los horarios se cargan solos al cambiar día o cancha (antes había que teclear la
   // fecha y tocar «Ver horarios»). La guarda `alive` descarta la respuesta de un cambio
@@ -82,7 +93,7 @@ export default function ReservarScreen() {
     return () => {
       alive = false;
     };
-  }, [token, courtId, dayIso]);
+  }, [token, courtId, dayIso, reload]);
 
   const court = courts.find((c) => c.id === courtId);
   const price = slot?.price ?? court?.price_per_slot ?? null;
@@ -150,8 +161,17 @@ export default function ReservarScreen() {
           )}
 
           <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
-            <Button title="Listo" onPress={() => router.back()} />
-            <Button title="Ver mis reservas" variant="glass" onPress={() => router.replace("/reservas")} />
+            {/* Es pestaña: «Listo» deja el formulario limpio para apartar otra. */}
+            <Button
+              title="Listo"
+              onPress={() => {
+                setResult(null);
+                setSlot(null);
+                setInvites([]);
+                setReload((n) => n + 1);
+              }}
+            />
+            <Button title="Ver mis reservas" variant="glass" onPress={() => router.push("/reservas")} />
           </View>
         </ScrollView>
       </Screen>
@@ -160,21 +180,34 @@ export default function ReservarScreen() {
 
   return (
     <Screen
-      title="Reservar cancha"
+      title="Reservar"
+      subtitle="Aparta una cancha y divide el costo"
       right={
-        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="Cerrar">
-          <Ionicons name="close" size={26} color={colors.textMuted} />
+        <Pressable
+          onPress={() => router.push("/reservas")}
+          hitSlop={10}
+          style={styles.myLink}
+          accessibilityRole="button"
+          accessibilityLabel="Mis reservas"
+        >
+          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.myLinkText}>Mis reservas</Text>
         </Pressable>
       }
     >
       <ScrollView
-        contentContainerStyle={styles.content}
+        ref={scrollRef}
+        // Con el botón fijo abajo, el final de la lista necesita aire extra para no quedar
+        // escondido detrás de él.
+        contentContainerStyle={[styles.content, slot ? { paddingBottom: 120 + 72 } : null]}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
       >
         {loadingCourts ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.lg }} />
+        ) : rental.isError && !rental.data ? (
+          <LoadError error={rental.error} onRetry={() => void rental.refetch()} style={{ marginTop: spacing.md }} />
         ) : courts.length === 0 ? (
           <GlassCard style={{ alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl }}>
             <Ionicons name="tennisball-outline" size={36} color={colors.textMuted} />
@@ -228,7 +261,14 @@ export default function ReservarScreen() {
                 {slots.map((s) => {
                   const on = slot?.start_time === s.start_time;
                   return (
-                    <Pressable key={s.start_time} onPress={() => setSlot(s)} accessibilityState={{ selected: on }}>
+                    <Pressable
+                      key={s.start_time}
+                      onPress={() => {
+                        if (!slot) scrollToSummary.current = true;
+                        setSlot(s);
+                      }}
+                      accessibilityState={{ selected: on }}
+                    >
                       <View style={[styles.chip, on && styles.chipOn]}>
                         <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.chipText, on && styles.chipTextOn]}>{hhmm(s.start_time)}</Text>
                       </View>
@@ -241,7 +281,15 @@ export default function ReservarScreen() {
             {slot && (
               <>
                 {/* Resumen de lo que va a apartar: dónde, cuándo, cuánto dura y cuánto cuesta. */}
-                <GlassCard strong style={{ marginTop: spacing.md, gap: 4 }}>
+                <View
+                  style={{ marginTop: spacing.md }}
+                  onLayout={(e) => {
+                    if (!scrollToSummary.current) return;
+                    scrollToSummary.current = false;
+                    scrollRef.current?.scrollTo({ y: Math.max(e.nativeEvent.layout.y - spacing.sm, 0), animated: true });
+                  }}
+                >
+                <GlassCard strong style={{ gap: 4 }}>
                   <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.summaryTitle}>
                     {court?.name} · {capitalize(longDay(day))}
                   </Text>
@@ -256,6 +304,7 @@ export default function ReservarScreen() {
                     </Muted>
                   )}
                 </GlassCard>
+                </View>
 
                 <Label>¿Con quién juegas? (opcional)</Label>
                 <Muted>El costo se divide entre tú y quienes agregues. Les avisas por WhatsApp.</Muted>
@@ -300,15 +349,14 @@ export default function ReservarScreen() {
             )}
 
             {error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
-
-            {slot && (
-              <View style={{ marginTop: spacing.lg }}>
-                <Button title={`Apartar cancha · ${money(price)}`} onPress={book} loading={booking} />
-              </View>
-            )}
           </>
         )}
       </ScrollView>
+      {slot && (
+        <View style={[styles.footer, { bottom: footerBottom }]} pointerEvents="box-none">
+          <Button title={`Apartar cancha · ${money(price)}`} onPress={book} loading={booking} />
+        </View>
+      )}
     </Screen>
   );
 }
@@ -350,4 +398,17 @@ const styles = StyleSheet.create({
   payNote: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
   payNoteText: { color: colors.text, fontSize: 15, fontWeight: "600" },
   error: { color: colors.danger, fontSize: 13, marginTop: spacing.sm },
+  footer: { position: "absolute", left: spacing.lg, right: spacing.lg },
+  myLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glassStrong,
+  },
+  myLinkText: { color: colors.primary, fontSize: 13, fontWeight: "700" },
 });
