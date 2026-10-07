@@ -12,10 +12,9 @@ import { PlayerStatsCard } from "@/components/PlayerStats";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Button, Label, Muted } from "@/components/ui";
-import { useMyStats } from "@/hooks";
+import { useFeedbackAccess, useMyStats } from "@/hooks";
 import { api } from "@/lib/api";
-import { clearPendingRoute } from "@/lib/notifications";
-import { unregisterDevice } from "@/lib/push";
+import { endSession } from "@/lib/session";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
@@ -53,9 +52,11 @@ const LEGAL_LINKS: {
 export default function ProfileScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { token, user, setSession, signOut } = useAuth();
+  const { token, user, setSession } = useAuth();
   const bugReport = useBugReport();
   const stats = useMyStats();
+  const access = useFeedbackAccess().list;
+  const pendingAccess = (access.data?.requests ?? []).filter((r) => r.status === "pending").length;
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
@@ -186,6 +187,34 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </GlassPressable>
 
+          {/* Tu bitácora: qué clubes pidieron leerla y quién tiene permiso (2026-10). */}
+          <GlassPressable
+            onPress={() => router.push("/privacidad")}
+            style={styles.reportRow}
+            accessibilityLabel={
+              pendingAccess > 0 ? `Tu bitácora, ${pendingAccess} solicitud por responder` : "Tu bitácora"
+            }
+          >
+            <View style={styles.reportIcon}>
+              <Ionicons name="lock-closed" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Tu bitácora</Text>
+              <Muted>
+                {pendingAccess > 0
+                  ? `${pendingAccess === 1 ? "Un club pide" : `${pendingAccess} clubes piden`} leerla: tú decides.`
+                  : "Es tuya: un club solo la lee si le das permiso."}
+              </Muted>
+            </View>
+            {pendingAccess > 0 ? (
+              <View style={styles.badge}>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.badgeText}>{pendingAccess}</Text>
+              </View>
+            ) : (
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+            )}
+          </GlassPressable>
+
           {/* Impugnaciones por votar */}
           <GlassPressable
             onPress={() => router.push("/disputes")}
@@ -256,16 +285,9 @@ export default function ProfileScreen() {
                   text: "Cerrar sesión",
                   style: "destructive",
                   onPress: async () => {
-                    // Suelta el dispositivo ANTES de tirar el token: si no, este teléfono
-                    // sigue recibiendo los push del jugador que acaba de salir.
-                    await unregisterDevice(token);
-                    signOut();
-                    // El destino de un push pendiente era de quien acaba de salir: no puede
-                    // replayearse cuando entre otra persona en este teléfono.
-                    clearPendingRoute();
-                    // Y borra la caché: las queryKeys no llevan el id del jugador, así que
-                    // el siguiente en entrar vería la jornada y el ranking del anterior.
-                    queryClient.clear();
+                    // Suelta el dispositivo, borra el token de ESTE teléfono en el backend
+                    // (el panel sigue abierto) y limpia caché y push pendiente.
+                    await endSession(queryClient);
                     router.replace("/login");
                   },
                 },
@@ -332,4 +354,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   reportTitle: { color: colors.text, fontSize: 15, fontWeight: "700" },
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: radius.full,
+    paddingHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.warning,
+  },
+  badgeText: { color: colors.ink900, fontSize: 12, fontWeight: "800" },
 });

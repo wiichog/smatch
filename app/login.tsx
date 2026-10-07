@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useState } from "react";
 import {
@@ -17,7 +17,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { enterAppAfterLogin } from "@/lib/notifications";
-import { type ClubMembership, useAuth } from "@/store/auth";
+import { toAuthUser, useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 // Mismo video del hero de la landing / login web (placeholder — reemplazar por
@@ -27,6 +27,9 @@ const LOGIN_VIDEO =
 
 export default function Login() {
   const router = useRouter();
+  // `expired`: la raíz trajo aquí a alguien cuya sesión ya no sirve (401): se le dice
+  // por qué volvió a esta pantalla en vez de dejarlo adivinar.
+  const { expired } = useLocalSearchParams<{ expired?: string }>();
   const setSession = useAuth((s) => s.setSession);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,36 +46,26 @@ export default function Login() {
 
   async function onLogin() {
     setError("");
+    // Sin esto el backend contestaba «password: Este campo no puede estar en blanco».
+    if (!email.trim() || !password) {
+      setError("Escribe tu correo y tu contraseña.");
+      return;
+    }
     setLoading(true);
     try {
       const data = await api.login(email.trim(), password);
-      const memberships: ClubMembership[] = (data.user?.memberships ?? []).map((m: any) => ({
-        organization_id: m.organization_id,
-        organization_name: m.organization_name,
-        role: m.role,
-      }));
-      const players = data.user?.players ?? [];
-      if (!players.length && !memberships.length) {
+      const user = toAuthUser(data.user);
+      const session = data.session === "device" ? "device" : "shared";
+      if (!user.players_count && !user.memberships?.length) {
         setError("Tu cuenta no está vinculada a ningún jugador. Pídele a tu club que te invite.");
+        // El backend ya abrió una sesión para este teléfono: se cierra para no dejarla viva.
+        if (session === "device") void api.logout(data.token).catch(() => {});
         return;
       }
-      const email0 = data.user.email ?? "";
-      const sessionName = (data.user.name ?? "").trim();
-      // Un backend anterior manda el correo como nombre del jugador invitado: si es así,
-      // se usa el nombre del jugador vinculado.
-      const name =
-        sessionName && sessionName !== email0 ? sessionName : players[0]?.full_name ?? sessionName;
-      setSession(data.token, {
-        id: data.user.id,
-        email: email0,
-        name,
-        avatar_url: data.user.avatar_url ?? null,
-        players_count: players.length,
-        memberships,
-      });
+      setSession(data.token, user, session);
       // Staff sin jugador (dueño, administrador): entra al modo club (fase 3, 2026-10).
       // Antes se le cerraba la puerta con «esta app es para jugadores».
-      if (!players.length) {
+      if (!user.players_count) {
         router.replace("/club");
         return;
       }
@@ -119,6 +112,11 @@ export default function Login() {
             <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.subtitle}>Consulta tu jornada, tu cancha y tu ranking.</Text>
 
             <View style={styles.form}>
+              {expired === "1" && !error && (
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.notice}>
+                  Tu sesión terminó (cambió tu contraseña o se cerró desde otro lado). Vuelve a entrar.
+                </Text>
+              )}
               <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={styles.input}
                 placeholder="Correo"
@@ -186,6 +184,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   error: { color: colors.danger, fontSize: 14 },
+  notice: { color: colors.text, fontSize: 14, textAlign: "center" },
   helpLink: { color: colors.textMuted, fontSize: 14, textAlign: "center", textDecorationLine: "underline" },
   helpBox: {
     backgroundColor: alpha(colors.ink900, 0.6),

@@ -77,6 +77,10 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
         : { pathname: "/(tabs)/dashboard" };
     }
 
+    // Tu club pide leer tu bitácora → la pantalla donde decides (y quitas permisos).
+    case "feedback_access":
+      return { pathname: "/privacidad" };
+
     // Cumpleaños: va dirigido al staff del club y esta app es del jugador. No hay
     // pantalla a la que llevar, así que no movemos al usuario de donde esté.
     case "player_birthday":

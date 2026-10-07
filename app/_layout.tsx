@@ -6,7 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/space-grotesk";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, type ErrorBoundaryProps } from "expo-router";
+import { router, Stack, type ErrorBoundaryProps } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -15,7 +15,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppErrorFallback } from "@/components/AppErrorFallback";
 import { BugReportProvider } from "@/components/BugReport";
 import { ToastProvider } from "@/components/Toast";
-import { useNotificationRouting } from "@/lib/notifications";
+import { setUnauthorizedHandler } from "@/lib/api";
+import { clearPendingRoute, useNotificationRouting } from "@/lib/notifications";
+import { isEndingSession } from "@/lib/session";
+import { useAuth } from "@/store/auth";
 
 /** Red de seguridad global: cualquier throw en render de una pantalla cae aquí en vez de
  *  tumbar la app. expo-router usa este export por convención. */
@@ -35,6 +38,20 @@ export default function RootLayout() {
   // Tocar un push navega a la pantalla que corresponde. Va aquí, en la raíz, para
   // atrapar también el arranque en frío (la notificación que abrió la app).
   useNotificationRouting();
+
+  // Un 401 con sesión guardada = el token ya no sirve (suspensión, cambio de contraseña,
+  // sesión cerrada desde otro lado). Se sale una sola vez y se explica en el login, en
+  // vez de dejar cada pantalla mostrando errores.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      if (isEndingSession() || !useAuth.getState().token) return;
+      useAuth.getState().signOut();
+      clearPendingRoute();
+      queryClient.clear();
+      router.replace({ pathname: "/login", params: { expired: "1" } });
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const [fontsLoaded] = useFonts({
     SpaceGrotesk_300Light,

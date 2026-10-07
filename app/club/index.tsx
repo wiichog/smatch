@@ -14,7 +14,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { GlassCard } from "@/components/Glass";
@@ -24,13 +35,12 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Button, Label, Muted, Pill, SelectChip } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { useClubActions, useClubToday } from "@/hooks";
-import type { ClubToday, PayMethod } from "@/lib/api";
+import { api, type ClubToday, type PayMethod } from "@/lib/api";
 import { money, roundShort } from "@/lib/format";
 import { usePullRefresh } from "@/lib/pullRefresh";
 import { HOME_ROUTE } from "@/lib/routes";
-import { clearPendingRoute } from "@/lib/notifications";
-import { unregisterDevice } from "@/lib/push";
-import { isClubOnly, useAuth } from "@/store/auth";
+import { endSession } from "@/lib/session";
+import { isClubOnly, toAuthUser, useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 const PANEL_URL = "https://www.smatchapp.mx/portal/admin";
@@ -41,7 +51,7 @@ const ROLE: Record<string, string> = { owner: "Dueño", admin: "Supervisor", vie
 export default function ClubScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { token, user, signOut } = useAuth();
+  const { user } = useAuth();
   const memberships = user?.memberships ?? [];
   const [orgId, setOrgId] = useState<number | null>(memberships[0]?.organization_id ?? null);
   const today = useClubToday(orgId);
@@ -56,10 +66,7 @@ export default function ClubScreen() {
         text: "Cerrar sesión",
         style: "destructive",
         onPress: async () => {
-          await unregisterDevice(token);
-          signOut();
-          clearPendingRoute();
-          queryClient.clear();
+          await endSession(queryClient);
           router.replace("/login");
         },
       },
@@ -101,6 +108,10 @@ export default function ClubScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        // El nombre de «Súmate como jugador» se escribe abajo: sin esto el teclado tapaba
+        // el botón y no había cómo llegar a él.
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         refreshControl={
           <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
@@ -126,6 +137,10 @@ export default function ClubScreen() {
           <Today data={data} />
         ) : null}
 
+        {data && orgId != null && data.can_edit && !data.club.is_demo && !playsIn(user, orgId) && (
+          <JoinAsPlayerCard key={orgId} orgId={orgId} clubName={data.club.name} />
+        )}
+
         <View style={styles.footer}>
           <Button
             title="Abrir el panel completo"
@@ -140,6 +155,78 @@ export default function ClubScreen() {
         </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+/** ¿Ya juega en este club? Sin `player_orgs` (sesión de antes de 2026-10) no se sabe en
+ *  cuál juega, así que solo se ofrece a quien no juega en ninguno. */
+function playsIn(user: ReturnType<typeof useAuth.getState>["user"], orgId: number): boolean {
+  if (user?.player_orgs) return user.player_orgs.includes(orgId);
+  return (user?.players_count ?? 0) > 0;
+}
+
+/**
+ * El dueño o supervisor que también juega (2026-10): se suma como jugador de su club con
+ * esta misma cuenta, sin invitación ni otra contraseña. Antes no había forma: su correo
+ * ya era una cuenta y la invitación de jugador se negaba.
+ */
+function JoinAsPlayerCard({ orgId, clubName }: { orgId: number; clubName: string }) {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { token, user, setSession } = useAuth();
+  const looksLikeName = !!user?.name && !user.name.includes("@");
+  const [name, setName] = useState(looksLikeName ? user!.name : "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function join() {
+    if (!token) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.joinAsPlayer(token, orgId, name.trim());
+      // La sesión se relee para que la app sepa que ya juega (y le ofrezca el modo jugador).
+      const me = await api.me(token);
+      setSession(token, toAuthUser(me.user));
+      void queryClient.invalidateQueries();
+      toast.show(`¡Listo! Ya eres jugador de ${clubName}. Cambia de modo con «Jugador».`);
+    } catch (e) {
+      setError((e as Error).message || "No se pudo. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <GlassCard style={styles.joinCard}>
+      <View style={styles.rowIcon}>
+        <Ionicons name="tennisball" size={18} color={colors.primary} />
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle}>
+          ¿También juegas en {clubName}?
+        </Text>
+      </View>
+      <Muted>
+        Súmate como jugador con esta misma cuenta: verás tu jornada, tu liga y tus números, sin otra cuenta ni
+        invitación.
+      </Muted>
+      <TextInput
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
+        style={styles.input}
+        value={name}
+        onChangeText={(v) => {
+          setName(v);
+          setError(null);
+        }}
+        placeholder="Tu nombre como jugador"
+        placeholderTextColor={colors.textFaint}
+        autoCapitalize="words"
+        returnKeyType="go"
+        onSubmitEditing={() => name.trim().length >= 3 && !busy && void join()}
+        accessibilityLabel="Tu nombre como jugador"
+      />
+      {!!error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
+      <Button title="Sumarme como jugador" onPress={join} loading={busy} disabled={name.trim().length < 3} />
+    </GlassCard>
   );
 }
 
@@ -500,5 +587,17 @@ const styles = StyleSheet.create({
   resRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   resTime: { width: 48, color: colors.primary, fontSize: 15, fontFamily: fonts.displaySemi },
   footer: { marginTop: spacing.xl, gap: spacing.sm },
+  joinCard: { marginTop: spacing.lg, gap: spacing.sm },
+  input: {
+    minHeight: 46,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glassStrong,
+    color: colors.text,
+    paddingHorizontal: spacing.md,
+    fontSize: 15,
+  },
+  error: { color: colors.danger, fontSize: 13 },
   demo: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
 });

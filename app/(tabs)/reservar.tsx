@@ -47,6 +47,10 @@ export default function ReservarScreen() {
   const days = useMemo(() => nextDays(DAYS_AHEAD), []);
   const rental = useRentalCourts();
   const courts = rental.data?.courts ?? [];
+  // Quien juega en dos clubes ve las canchas de los dos: con dos «Cancha 1» hay que
+  // decir de qué club es cada una.
+  const multiClub = new Set(courts.map((c) => c.organization_id ?? 0)).size > 1;
+  const courtLabel = (c: { name: string; club?: string }) => (multiClub && c.club ? `${c.name} · ${c.club}` : c.name);
   const loadingCourts = rental.isLoading;
   const [courtId, setCourtId] = useState<number | null>(null);
   const [day, setDay] = useState<Date>(days[0]);
@@ -239,7 +243,7 @@ export default function ReservarScreen() {
                     return (
                       <Pressable key={c.id} onPress={() => setCourtId(c.id)} accessibilityState={{ selected: on }}>
                         <View style={[styles.chip, on && styles.chipOn]}>
-                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.chipText, on && styles.chipTextOn]}>{c.name}</Text>
+                          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.chipText, on && styles.chipTextOn]}>{courtLabel(c)}</Text>
                         </View>
                       </Pressable>
                     );
@@ -254,7 +258,7 @@ export default function ReservarScreen() {
             ) : slots.length === 0 ? (
               <Muted>
                 No quedan horarios libres {shortDayLabel(day) === "Hoy" ? "hoy" : `el ${longDay(day)}`}
-                {court ? ` en ${court.name}` : ""}. Prueba otro día{courts.length > 1 ? " u otra cancha" : ""}.
+                {court ? ` en ${courtLabel(court)}` : ""}. Prueba otro día{courts.length > 1 ? " u otra cancha" : ""}.
               </Muted>
             ) : (
               <View style={styles.chipRow}>

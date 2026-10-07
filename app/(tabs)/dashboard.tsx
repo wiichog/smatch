@@ -13,7 +13,7 @@ import { LoadError } from "@/components/LoadError";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Trend } from "@/components/Trend";
 import { Label, Muted } from "@/components/ui";
-import { useDashboard, useMyReservations, useMyTournaments, useNextRound } from "@/hooks";
+import { useDashboard, useFeedbackAccess, useMyReservations, useMyTournaments, useNextRound } from "@/hooks";
 import { usePullRefresh } from "@/lib/pullRefresh";
 import type { DashboardData, MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundShort, roundWhen } from "@/lib/format";
@@ -33,6 +33,8 @@ export default function DashboardScreen() {
   const round = nextRound.data?.next_round;
   const user = useAuth((s) => s.user);
   const firstName = user?.name?.split(" ")[0] ?? "";
+  // Un club pidió leer tu bitácora: se avisa aquí también, no solo con el push.
+  const accessAsks = (useFeedbackAccess().list.data?.requests ?? []).filter((r) => r.status === "pending");
 
   const enrolled = data?.enrolled_leagues ?? [];
   // La lista de torneos sale de me/tournaments (también los «solo del club» donde ya
@@ -97,6 +99,25 @@ export default function DashboardScreen() {
               <Avatar name={user?.name} uri={user?.avatar_url} size={48} ring />
             </Pressable>
           </View>
+
+          {accessAsks.length > 0 && (
+            <GlassPressable
+              onPress={() => router.push("/privacidad")}
+              style={styles.accessNotice}
+              accessibilityLabel="Solicitud para leer tu bitácora. Responder"
+            >
+              <Ionicons name="lock-closed" size={18} color={colors.warning} />
+              <View style={{ flex: 1 }}>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.accessTitle} numberOfLines={2}>
+                  {accessAsks.length === 1
+                    ? `${accessAsks[0].club} pide leer tu bitácora`
+                    : `${accessAsks.length} clubes piden leer tu bitácora`}
+                </Text>
+                <Muted>Tú decides. Toca para responder.</Muted>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+            </GlassPressable>
+          )}
 
           {/* Hero: próxima jornada. Se toca para ver partidos y compañeros. */}
           {loadFailed ? (
@@ -427,6 +448,8 @@ function ReservationLine({ r }: { r: MyReservation }) {
 }
 
 const styles = StyleSheet.create({
+  accessNotice: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
+  accessTitle: { color: colors.text, fontSize: 15, fontWeight: "700" },
   alsoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   alsoIcon: {
     width: 40,

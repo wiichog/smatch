@@ -4,6 +4,7 @@ import {
   api,
   type ClubToday,
   type DashboardData,
+  type FeedbackAccessRequest,
   type HistoryRow,
   type LeagueStandings,
   type MyReservation,
@@ -210,6 +211,23 @@ export function useClubActions() {
     onSuccess: refresh,
   });
   return { substitute, capture, publish, pay };
+}
+
+/** Clubes que pidieron leer tu bitácora, y decidir. */
+export function useFeedbackAccess() {
+  const token = useAuth((s) => s.token);
+  const qc = useQueryClient();
+  const list = useQuery<{ requests: FeedbackAccessRequest[] }>({
+    queryKey: ["feedback-access"],
+    queryFn: () => api.myFeedbackAccess(token!),
+    enabled: !!token,
+  });
+  const decide = useMutation({
+    mutationFn: (v: { id: number; decision: "approve" | "reject" | "revoke" }) =>
+      api.decideFeedbackAccess(token!, v.id, v.decision),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["feedback-access"] }),
+  });
+  return { list, decide };
 }
 
 export function useHistory() {

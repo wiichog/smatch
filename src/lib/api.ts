@@ -30,17 +30,32 @@ export class ApiError extends Error {
 /** Mensaje cuando la petición ni siquiera llega al servidor (sin red, servidor caído). */
 export const OFFLINE_MESSAGE = "No pudimos conectar con Smatch. Revisa tu internet e intenta de nuevo.";
 
+let onUnauthorized: (() => void) | null = null;
+
+/**
+ * Qué hacer cuando el servidor ya no reconoce el token guardado (401 con sesión): la
+ * cuenta se suspendió, cambió su contraseña o cerró sesión en este teléfono desde otro
+ * lado. Sin esto la app se quedaba enseñando errores en cada pantalla. Lo pone la raíz.
+ */
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
+}
+
 /**
  * `fetch` que, si la red falla, lanza un `ApiError` en español. Sin esto el jugador veía
  * el error crudo del motor («Network request failed») justo en el login, que es la
- * primera pantalla de la app.
+ * primera pantalla de la app. Y avisa del 401 de una sesión que ya no sirve.
  */
 async function fetchOrExplain(url: string, init: RequestInit): Promise<Response> {
+  let res: Response;
   try {
-    return await fetch(url, init);
+    res = await fetch(url, init);
   } catch {
     throw new ApiError(OFFLINE_MESSAGE, 0);
   }
+  const headers = (init.headers ?? {}) as Record<string, string>;
+  if (res.status === 401 && headers.Authorization) onUnauthorized?.();
+  return res;
 }
 
 async function request<T>(
@@ -71,6 +86,9 @@ export interface RentalCourt {
   id: number;
   name: string;
   price_per_slot?: string | number | null;
+  /** Club de la cancha: quien juega en dos clubes ve las de los dos. Falta en un backend anterior. */
+  club?: string;
+  organization_id?: number;
 }
 
 export interface PersonBrief {
@@ -309,6 +327,18 @@ export interface SubstituteCandidates {
 }
 
 export type PayMethod = "cash" | "card" | "transfer";
+
+/** Un club que pidió leer tu bitácora (`GET /api/v2/me/feedback-access/`). */
+export interface FeedbackAccessRequest {
+  id: number;
+  club: string;
+  logo_url: string | null;
+  status: "pending" | "approved" | "rejected" | "revoked";
+  /** Para qué la quiere el club. */
+  message: string;
+  requested_at: string;
+  responded_at: string | null;
+}
 
 /** Un torneo en la lista del jugador (`GET /api/v2/me/tournaments/`). */
 export interface TournamentRow {
@@ -599,11 +629,27 @@ function resolvePhotoPart(
 }
 
 export const api = {
+  // `client: "app"`: el backend da un token propio de este teléfono (2026-10), que al
+  // cerrar sesión se borra sin sacar al panel ni a los otros teléfonos.
   login: (email: string, password: string) =>
-    request<{ token: string; user: any }>("/api/v3/auth/login/", {
+    request<{ token: string; user: any; session?: "device" | "shared" }>("/api/v3/auth/login/", {
       method: "POST",
-      body: { email, password },
+      body: { email, password, client: "app" },
     }),
+  me: (token: string) => request<{ user: any }>("/api/v3/auth/me/", { token }),
+  logout: (token: string) =>
+    request<void>("/api/v3/auth/logout/", { method: "POST", token, body: { client: "app" } }),
+  /** El dueño o supervisor se suma como jugador de su propio club. */
+  joinAsPlayer: (token: string, orgId: number, fullName?: string) =>
+    request<{ player_id: number; full_name: string; created: boolean }>(`/api/v3/orgs/${orgId}/players/me/`, {
+      method: "POST",
+      token,
+      body: fullName ? { full_name: fullName } : {},
+    }),
+  myFeedbackAccess: (token: string) =>
+    request<{ requests: FeedbackAccessRequest[] }>("/api/v2/me/feedback-access/", { token }),
+  decideFeedbackAccess: (token: string, id: number, decision: "approve" | "reject" | "revoke") =>
+    request<FeedbackAccessRequest>(`/api/v2/me/feedback-access/${id}/`, { method: "POST", token, body: { decision } }),
   profile: (token: string) => request<any>("/api/v2/me/profile/", { token }),
   dashboard: (token: string) => request<DashboardData>("/api/v2/me/dashboard/", { token }),
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
