@@ -136,6 +136,27 @@ export interface LeagueStandings {
   rows: StandingRow[];
 }
 
+type Result = "win" | "loss" | "draw";
+
+/** `GET /api/v2/me/stats/`: los números del jugador, de todos sus clubes. */
+export interface PlayerStats {
+  clubs: { club: string; logo_url: string | null; category: string | null; branch: string | null }[];
+  matches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  /** Entero (58 = 58 %); `null` sin partidos. */
+  win_rate: number | null;
+  streak: { kind: Result; count: number } | null;
+  best_win_streak: number;
+  /** De la más reciente a la más vieja, máximo 5. */
+  last_results: Result[];
+  games_for: number;
+  games_against: number;
+  rounds_played: number;
+  moves: { up: number; down: number };
+}
+
 /** Qué pasó con un jugador al cerrar la jornada. */
 export interface RoundMove {
   direction: Direction;
@@ -352,6 +373,7 @@ export const api = {
     request<LeagueStandings>(`/api/v2/leagues/${leagueId}/standings/`, { token }),
   roundResults: (token: string, roundId: number) =>
     request<RoundResults>(`/api/v2/rounds/${roundId}/results/`, { token }),
+  myStats: (token: string) => request<PlayerStats>("/api/v2/me/stats/", { token }),
   // `roundId` pide UNA jornada concreta: es lo que usa el deep link de un push, que
   // trae el id. Sin él, el servidor elige la más próxima del jugador.
   nextRound: (token: string, roundId?: number) =>

@@ -7,6 +7,7 @@ import {
   type LeagueStandings,
   type MyReservation,
   type NextRound,
+  type PlayerStats,
   type Ranking,
   type RoundResults,
 } from "@/lib/api";
@@ -60,6 +61,16 @@ export function useRoundResults(roundId: number | null) {
     queryKey: ["round-results", roundId],
     queryFn: () => api.roundResults(token!, roundId!),
     enabled: !!token && roundId != null,
+  });
+}
+
+/** Los números del jugador para su Perfil. */
+export function useMyStats() {
+  const token = useAuth((s) => s.token);
+  return useQuery<PlayerStats>({
+    queryKey: ["stats"],
+    queryFn: () => api.myStats(token!),
+    enabled: !!token,
   });
 }
 

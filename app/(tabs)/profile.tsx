@@ -8,8 +8,11 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, T
 import { Avatar } from "@/components/Avatar";
 import { useBugReport } from "@/components/BugReport";
 import { GlassCard, GlassPressable } from "@/components/Glass";
+import { PlayerStatsCard } from "@/components/PlayerStats";
 import { Screen } from "@/components/Screen";
+import { SectionHeader } from "@/components/SectionHeader";
 import { Button, Label, Muted } from "@/components/ui";
+import { useMyStats } from "@/hooks";
 import { api } from "@/lib/api";
 import { clearPendingRoute } from "@/lib/notifications";
 import { unregisterDevice } from "@/lib/push";
@@ -52,6 +55,7 @@ export default function ProfileScreen() {
   const queryClient = useQueryClient();
   const { token, user, setSession, signOut } = useAuth();
   const bugReport = useBugReport();
+  const stats = useMyStats();
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
@@ -109,11 +113,26 @@ export default function ProfileScreen() {
             </View>
           </Pressable>
           <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.name}>{user?.name}</Text>
+          {/* En qué club juega, con su categoría y rama (uno por club). */}
+          {(stats.data?.clubs ?? []).map((c) => (
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} key={c.club} style={styles.club}>
+              {[c.club, c.category, c.branch].filter(Boolean).join(" · ")}
+            </Text>
+          ))}
           {/* Si la sesión no trae nombre, `name` ES el correo: no se repite debajo. */}
           {!!user?.email && user.email !== user?.name && <Muted>{user.email}</Muted>}
           <Muted style={{ fontSize: 12 }}>Toca tu foto para cambiarla</Muted>
           {photoError ? <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{photoError}</Text> : null}
         </GlassCard>
+
+        {/* Tus números: partidos, % de victorias, racha, forma, subidas y bajadas. */}
+        <SectionHeader title="Tus números" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }} />
+        <PlayerStatsCard
+          stats={stats.data}
+          loading={stats.isLoading}
+          failed={stats.isError}
+          onRetry={() => void stats.refetch()}
+        />
 
         {/* Acciones del jugador: una lista, no tarjetas sueltas — 8 pt entre filas. */}
         <View style={styles.actions}>
@@ -260,6 +279,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
   name: { fontSize: 22, fontWeight: "800", color: colors.text, marginTop: spacing.sm },
+  club: { color: colors.primary, fontSize: 14, fontWeight: "700", textAlign: "center" },
   avatarWrap: { width: 88, height: 88, alignItems: "center", justifyContent: "center" },
   avatarLoading: {
     position: "absolute",
