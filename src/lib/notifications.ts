@@ -52,9 +52,13 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
     case "round_reminder":
       return { pathname: "/(tabs)/jornada", params: roundId ? { round_id: roundId } : undefined };
 
-    // Subiste/bajaste de cancha → el ranking, que es donde se ve el resultado.
+    // «Jornada 4 cerrada: subiste a la pista 1» → los resultados de ESA jornada: tu
+    // movimiento y el de todas las pistas. Sin `round_id` (pushes viejos en cola), el
+    // ranking de la liga, que era el destino de antes.
     case "round_closed":
-      return { pathname: "/(tabs)/ranking", params: leagueId ? { league_id: leagueId } : undefined };
+      return roundId
+        ? { pathname: "/round/[roundId]", params: { roundId } }
+        : { pathname: "/(tabs)/ranking", params: leagueId ? { league_id: leagueId } : undefined };
 
     // Impugnación pendiente de tu voto → la lista de impugnaciones por votar, con la
     // del push resaltada (puede haber varias abiertas y de clubes distintos).

@@ -8,6 +8,7 @@ import {
   type MyReservation,
   type NextRound,
   type Ranking,
+  type RoundResults,
 } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 
@@ -49,6 +50,16 @@ export function useLeagueStandings(leagueId: number | null) {
     queryKey: ["standings", leagueId],
     queryFn: () => api.leagueStandings(token!, leagueId!),
     enabled: !!token && leagueId != null,
+  });
+}
+
+/** Resultados de una jornada cerrada. */
+export function useRoundResults(roundId: number | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<RoundResults>({
+    queryKey: ["round-results", roundId],
+    queryFn: () => api.roundResults(token!, roundId!),
+    enabled: !!token && roundId != null,
   });
 }
 

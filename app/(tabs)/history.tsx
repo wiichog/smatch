@@ -22,6 +22,8 @@ import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 type Group = {
   key: string;
+  roundId: number | null;
+  roundClosed: boolean;
   league: string | null;
   roundNumber: number;
   courtNumber: number;
@@ -70,6 +72,7 @@ export default function HistoryScreen() {
 
 /** Una jornada: liga, fecha, pista, puntos del día, si subiste o bajaste, y sus partidos. */
 function RoundCard({ group: g }: { group: Group }) {
+  const router = useRouter();
   const tone = toneFor(g.total);
   return (
     <GlassCard style={styles.card}>
@@ -97,6 +100,21 @@ function RoundCard({ group: g }: { group: Group }) {
           <MatchLine row={m} />
         </View>
       ))}
+
+      {g.roundClosed && g.roundId != null && (
+        <Pressable
+          onPress={() => router.push(`/round/${g.roundId}`)}
+          hitSlop={6}
+          style={styles.resultsLink}
+          accessibilityRole="button"
+          accessibilityLabel={`Ver los resultados de la jornada ${g.roundNumber}: todas las pistas`}
+        >
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.resultsText}>
+            Ver resultados de la jornada
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+        </Pressable>
+      )}
 
       <Muted style={styles.hint}>¿Un marcador está mal? Toca el partido para impugnarlo.</Muted>
     </GlassCard>
@@ -201,6 +219,8 @@ function groupByRound(rows: HistoryRow[]): Group[] {
     if (!g) {
       g = {
         key,
+        roundId: r.round_id ?? null,
+        roundClosed: r.round_closed ?? false,
         league: r.league_name ?? null,
         roundNumber: r.round_number,
         courtNumber: r.court_number,
@@ -247,4 +267,6 @@ const styles = StyleSheet.create({
   score: { fontSize: 22, fontFamily: fonts.display, fontVariant: ["tabular-nums"] },
   delta: { fontSize: 12, fontWeight: "800" },
   hint: { fontSize: 12, marginTop: spacing.xs },
+  resultsLink: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: spacing.xs },
+  resultsText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
 });

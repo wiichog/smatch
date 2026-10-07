@@ -7,7 +7,7 @@
  * pista) o por puntos, con su fila resaltada.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -242,6 +242,7 @@ function MySpot({
   me: StandingRow;
   goTo: { label: string; onPress: () => void } | null;
 }) {
+  const router = useRouter();
   const { league, rows } = data;
   const above = rows.filter((r) => r.points > me.points);
   const next = above[above.length - 1]; // el más cercano por arriba
@@ -305,11 +306,29 @@ function MySpot({
         </View>
       )}
       {!!meta && <Muted>{meta}</Muted>}
-      {goTo && (
-        <Pressable onPress={goTo.onPress} hitSlop={8} style={styles.goRow} accessibilityRole="button">
-          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.goText}>{goTo.label}</Text>
-          <Ionicons name="arrow-down" size={14} color={colors.primary} />
-        </Pressable>
+      {(goTo || league.last_closed_round_id) && (
+        <View style={styles.links}>
+          {goTo && (
+            <Pressable onPress={goTo.onPress} hitSlop={8} style={styles.goRow} accessibilityRole="button">
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.goText}>{goTo.label}</Text>
+              <Ionicons name="arrow-down" size={14} color={colors.primary} />
+            </Pressable>
+          )}
+          {league.last_closed_round_id != null && (
+            <Pressable
+              onPress={() => router.push(`/round/${league.last_closed_round_id}`)}
+              hitSlop={8}
+              style={styles.goRow}
+              accessibilityRole="button"
+              accessibilityLabel={`Resultados de la jornada ${league.last_closed_round}`}
+            >
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.goText}>
+                Resultados J{league.last_closed_round}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </Pressable>
+          )}
+        </View>
       )}
     </GlassCard>
   );
@@ -390,7 +409,8 @@ const styles = StyleSheet.create({
   spotStatLabel: { fontSize: 9, letterSpacing: 1.5, color: colors.textFaint, fontWeight: "700" },
   spotLine: { color: colors.text, fontSize: 15, fontWeight: "600" },
   moveRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  goRow: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: 2 },
+  links: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.lg, rowGap: spacing.xs, marginTop: 2 },
+  goRow: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start" },
   goText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
   modeRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
   courtBlock: { marginTop: spacing.lg, gap: spacing.sm },

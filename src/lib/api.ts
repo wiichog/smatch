@@ -129,9 +129,63 @@ export interface LeagueStandings {
     logo_url: string | null;
     rounds_closed: number;
     last_closed_round: number | null;
+    /** Para abrir los resultados de esa jornada. Falta en un backend anterior. */
+    last_closed_round_id?: number | null;
     remaining_rounds: number | null;
   };
   rows: StandingRow[];
+}
+
+/** Qué pasó con un jugador al cerrar la jornada. */
+export interface RoundMove {
+  direction: Direction;
+  from_court_number: number;
+  to_court_number: number;
+  /** Texto del cierre («Mejor de la cancha.», «Ausente sin suplente: …»). */
+  reason: string;
+  /** Un empate se resolvió por sorteo. */
+  by_draw: boolean;
+}
+
+export interface RoundResultPlayer {
+  player_id: number;
+  name: string;
+  avatar_url: string | null;
+  position: string;
+  /** Puntos que hizo en ESTA jornada. */
+  round_points: number;
+  is_substitute: boolean;
+  substitute_for: string | null;
+  /** `null` para el suplente: no tiene pista propia, cubre la del titular. */
+  movement: RoundMove | null;
+  is_me: boolean;
+}
+
+/** `GET /api/v2/rounds/<id>/results/`: una jornada cerrada, pista por pista. */
+export interface RoundResults {
+  round: {
+    id: number;
+    number: number;
+    scheduled_at: string | null;
+    closed_at: string | null;
+    league_id: number;
+    league_name: string;
+    club: string;
+  };
+  courts: {
+    court_number: number;
+    physical_court_number: number | null;
+    time_slot: string;
+    players: RoundResultPlayer[];
+    matches: {
+      match_number: number;
+      team_1: string[];
+      team_2: string[];
+      score: { team1: number; team2: number } | null;
+    }[];
+  }[];
+  /** No jugaron y aun así movieron (protegidos por suplente, o ausentes sin él). */
+  absent: { player_id: number; name: string; avatar_url: string | null; movement: RoundMove; is_me: boolean }[];
 }
 
 export interface HistoryRow {
@@ -144,6 +198,8 @@ export interface HistoryRow {
   points_delta: number;
   // --- Contexto (2026-10). Opcionales: un backend anterior no los manda. ---
   round_id?: number;
+  /** Solo una jornada cerrada tiene resultados que ver. */
+  round_closed?: boolean;
   league_id?: number;
   league_name?: string;
   scheduled_at?: string | null;
@@ -294,6 +350,8 @@ export const api = {
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
   leagueStandings: (token: string, leagueId: number) =>
     request<LeagueStandings>(`/api/v2/leagues/${leagueId}/standings/`, { token }),
+  roundResults: (token: string, roundId: number) =>
+    request<RoundResults>(`/api/v2/rounds/${roundId}/results/`, { token }),
   // `roundId` pide UNA jornada concreta: es lo que usa el deep link de un push, que
   // trae el id. Sin él, el servidor elige la más próxima del jugador.
   nextRound: (token: string, roundId?: number) =>
