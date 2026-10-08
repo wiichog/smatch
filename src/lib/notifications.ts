@@ -48,8 +48,12 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
   switch (data.type) {
     // Ya hay jornada / pronto juegas → la jornada CONCRETA que menciona el push.
     // Sin `round_id` (pushes viejos ya en cola) caemos a "la próxima" del servidor.
+    // «Tus resultados» y «Corrigieron un marcador» (2026-10) también: ahí están los
+    // marcadores de tu pista.
     case "round_published":
     case "round_reminder":
+    case "score_captured":
+    case "score_corrected":
       return { pathname: "/(tabs)/jornada", params: roundId ? { round_id: roundId } : undefined };
 
     // «Jornada 4 cerrada: subiste a la pista 1» → los resultados de ESA jornada: tu
@@ -68,9 +72,11 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
       return { pathname: "/disputes", params: disputeId ? { dispute_id: disputeId } : undefined };
     }
 
-    // El torneo arrancó, o tu pareja te inscribió / te sacó → su detalle. Sin id, Inicio.
+    // El torneo arrancó, tu pareja te inscribió / te sacó, o ya están los grupos → su
+    // detalle (ahí dice tu grupo). Sin id, Inicio.
     case "tournament_enrolled":
-    case "tournament_activated": {
+    case "tournament_activated":
+    case "tournament_groups": {
       const tournamentId = id(data.tournament_id);
       return tournamentId
         ? { pathname: "/tournament/[id]", params: { id: tournamentId } }
@@ -89,14 +95,39 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
     case "staff_reservation":
       return clubHome(data.org_id);
 
-    // Cumpleaños: va dirigido al staff del club y esta app es del jugador. No hay
-    // pantalla a la que llevar, así que no movemos al usuario de donde esté.
+    // Mensaje del club (2026-10): la notificación corta el texto; la pantalla lo
+    // muestra completo con lo que trae el push (no hay buzón en el servidor).
+    case "club_message":
+      return {
+        pathname: "/mensaje",
+        params: {
+          title: data.title ?? "",
+          body: keepParagraphs(data.body ?? ""),
+          club: data.club ?? "",
+          truncated: data.truncated ? "1" : "",
+        },
+      };
+
+    // Cumpleaños: va dirigido al staff del club y esta app es del jugador. Ticket de
+    // soporte resuelto: el aviso lo dice todo. No movemos al usuario de donde esté.
     case "player_birthday":
+    case "support_resolved":
       return null;
 
     default:
       return null;
   }
+}
+
+/**
+ * Los params de una ruta viajan dentro de un URL, y el estándar de URL BORRA los saltos
+ * de línea: el mensaje llegaba con los párrafos pegados («pistas.Si no puedes»). Se
+ * mandan como separador de párrafo Unicode (U+2029), que sí sobrevive; la pantalla
+ * `/mensaje` los vuelve a convertir en saltos de línea.
+ */
+export const PARAGRAPH = "\u2029";
+function keepParagraphs(text: string): string {
+  return text.replace(/\r?\n/g, PARAGRAPH);
 }
 
 /** El «Hoy en tu club» de ese club (con varios clubes, el del aviso). */

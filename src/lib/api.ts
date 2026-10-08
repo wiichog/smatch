@@ -121,7 +121,13 @@ export interface NextRound {
     is_substitute?: boolean;
     substitute_for?: string | null;
     courtmates: { name: string; position: string; avatar_url: string | null }[];
-    matches: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }[];
+    matches: {
+      match_number: number;
+      team_1: PersonBrief[];
+      team_2: PersonBrief[];
+      /** En cuanto el club lo captura (2026-10). `null` sin jugar; falta en un backend anterior. */
+      score?: { team1: number; team2: number } | null;
+    }[];
   } | null;
   /**
    * La jornada vigente de CADA liga del jugador (2026-10), la más próxima primero: quien
@@ -398,7 +404,14 @@ export interface TournamentDetail {
   my_category: string | null;
   partner: string | null;
   /** Todas sus inscripciones: puede jugar más de una categoría. */
-  my_entries?: { pair_id: number; category: string; partner: string; can_withdraw: boolean }[];
+  my_entries?: {
+    pair_id: number;
+    category: string;
+    partner: string;
+    can_withdraw: boolean;
+    /** Su grupo («A») en cuanto el club los siembra (2026-10). */
+    group?: string | null;
+  }[];
   categories: {
     id: number;
     name: string;
@@ -559,6 +572,12 @@ export interface DisputeRow {
   team_2?: string[];
   votes?: { approved: number; needed: number };
   round_closed?: boolean;
+  /**
+   * Qué pasa si se aprueba con la jornada ya cerrada (2026-10): `reclose` = se rehace el
+   * cierre (puntos y quién sube o baja); `points_only` = la siguiente ya está armada y
+   * solo se ajustan los puntos. Falta en un backend anterior.
+   */
+  on_approve?: "reclose" | "points_only" | null;
   resolved_at?: string | null;
 }
 

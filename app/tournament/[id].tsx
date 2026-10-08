@@ -108,6 +108,8 @@ export default function TournamentScreen() {
                         {e.category}
                         {e.partner ? ` · con ${e.partner}` : ""}
                       </Text>
+                      {/* En cuanto el club siembra los grupos (el push «Grupos listos» abre aquí). */}
+                      {!!e.group && <Pill label={`Grupo ${e.group}`} tone="primary" />}
                       {e.can_withdraw && (
                         <Pressable
                           onPress={() => askWithdraw(e.pair_id, e.category)}

@@ -1,6 +1,7 @@
 /**
  * Editar mi perfil (ticket #26). El jugador actualiza su foto, contacto, dirección y
- * fecha de nacimiento. Pega a PATCH /api/v2/me/profile/ (no toca club/categoría/ranking).
+ * fecha de nacimiento. Pega a PATCH /api/v2/me/profile/ (no toca club/categoría/ranking);
+ * desde 2026-10 el servidor lo copia a la ficha de cada club donde juega.
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import {
   View,
 } from "react-native";
 
+import { BirthDateField } from "@/components/BirthDateField";
 import { Screen } from "@/components/Screen";
 import { useToast } from "@/components/Toast";
 import { Button, Label, Muted } from "@/components/ui";
@@ -33,16 +35,11 @@ type Field = {
   keyboardType?: "default" | "phone-pad" | "email-address" | "number-pad" | "numbers-and-punctuation";
 };
 
-/** «1978-01-03» (como lo guarda el servidor) → «03/01/1978» (como lo escribe una persona). */
-function isoToDmy(iso?: string | null): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? "");
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso ?? "";
-}
-
 const FIELDS: Field[] = [
   { key: "phone", label: "Celular / WhatsApp", keyboardType: "phone-pad", placeholder: "+52 55 1234 5678" },
   { key: "email", label: "Correo de contacto", keyboardType: "email-address" },
-  { key: "birth_date", label: "Fecha de nacimiento", placeholder: "dd/mm/aaaa", keyboardType: "numbers-and-punctuation" },
+  // Se elige con ruedas (`BirthDateField`), no se teclea.
+  { key: "birth_date", label: "Fecha de nacimiento" },
   { key: "address_line", label: "Dirección" },
   { key: "city", label: "Ciudad" },
   { key: "state", label: "Estado" },
@@ -110,7 +107,7 @@ export default function ProfileEditScreen() {
         setForm({
           phone: p?.phone ?? "",
           email: p?.email ?? "",
-          birth_date: isoToDmy(p?.birth_date),
+          birth_date: p?.birth_date ?? "",
           address_line: p?.address_line ?? "",
           city: p?.city ?? "",
           state: p?.state ?? "",
@@ -231,19 +228,31 @@ export default function ProfileEditScreen() {
           {FIELDS.map((f) => (
             <View key={f.key} style={styles.field}>
               <Label>{f.label}</Label>
-              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                style={[styles.input, fieldErrors[f.key] ? styles.inputError : null]}
-                value={form[f.key] ?? ""}
-                onChangeText={(t) => {
-                  setForm((s) => ({ ...s, [f.key]: t }));
-                  // Limpia el error inline en cuanto el usuario corrige el campo.
-                  if (fieldErrors[f.key]) setFieldErrors((e) => ({ ...e, [f.key]: "" }));
-                }}
-                placeholder={f.placeholder}
-                placeholderTextColor={colors.textFaint}
-                keyboardType={f.keyboardType ?? "default"}
-                autoCapitalize={f.key === "email" ? "none" : "sentences"}
-              />
+              {f.key === "birth_date" ? (
+                <BirthDateField
+                  value={form.birth_date ?? ""}
+                  error={!!fieldErrors.birth_date}
+                  onChange={(iso) => {
+                    setForm((s) => ({ ...s, birth_date: iso }));
+                    if (fieldErrors.birth_date) setFieldErrors((e) => ({ ...e, birth_date: "" }));
+                  }}
+                />
+              ) : (
+                <TextInput
+                  maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  style={[styles.input, fieldErrors[f.key] ? styles.inputError : null]}
+                  value={form[f.key] ?? ""}
+                  onChangeText={(t) => {
+                    setForm((s) => ({ ...s, [f.key]: t }));
+                    // Limpia el error inline en cuanto el usuario corrige el campo.
+                    if (fieldErrors[f.key]) setFieldErrors((e) => ({ ...e, [f.key]: "" }));
+                  }}
+                  placeholder={f.placeholder}
+                  placeholderTextColor={colors.textFaint}
+                  keyboardType={f.keyboardType ?? "default"}
+                  autoCapitalize={f.key === "email" ? "none" : "sentences"}
+                />
+              )}
               {fieldErrors[f.key] ? <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{fieldErrors[f.key]}</Text> : null}
             </View>
           ))}

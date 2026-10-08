@@ -145,8 +145,7 @@ export default function DisputesScreen() {
                   )}
                   {d.round_closed && (
                     <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.warn}>
-                      La jornada ya cerró: si se aprueba se corrige el marcador, pero el ranking lo revisa tu
-                      club.
+                      {closedRoundNote(d.on_approve)}
                     </Text>
                   )}
                   {d.already_voted || d.raised_by_me ? (
@@ -172,7 +171,16 @@ export default function DisputesScreen() {
               <>
                 <SectionHeader index={2} title="Resueltas recientemente" count={recent.length} style={styles.section} />
                 {recent.map((d) => (
-                  <GlassCard key={d.id} style={{ gap: spacing.sm, marginBottom: spacing.md, opacity: 0.85 }}>
+                  <GlassCard
+                    key={d.id}
+                    strong={d.id === highlighted}
+                    style={{
+                      gap: spacing.sm,
+                      marginBottom: spacing.md,
+                      // La del push «Marcador corregido / Impugnación rechazada» se resalta.
+                      ...(d.id === highlighted ? styles.highlighted : { opacity: 0.85 }),
+                    }}
+                  >
                     <MatchHeader d={d} />
                     {d.status === "applied" ? (
                       <View style={styles.waitRow}>
@@ -198,6 +206,20 @@ export default function DisputesScreen() {
       </ScrollView>
     </Screen>
   );
+}
+
+/**
+ * Qué pasa si se aprueba con la jornada ya cerrada. Antes decía que el ranking «lo revisa
+ * tu club», pero nadie lo revisaba; desde 2026-10 el servidor lo hace y dice cómo.
+ */
+function closedRoundNote(onApprove: DisputeRow["on_approve"]): string {
+  if (onApprove === "reclose") {
+    return "La jornada ya cerró: si se aprueba, se corrigen el marcador, los puntos y quién sube o baja.";
+  }
+  if (onApprove === "points_only") {
+    return "La jornada ya cerró y la siguiente ya está armada: si se aprueba, se corrigen el marcador y los puntos, pero no quién sube o baja.";
+  }
+  return "La jornada ya cerró: si se aprueba se corrige el marcador, pero el ranking lo revisa tu club.";
 }
 
 /** «Liga · Jornada 4 · Pista 1 · Partido 2» y quién jugaba contra quién. */

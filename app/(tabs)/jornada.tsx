@@ -30,7 +30,7 @@ import { usePullRefresh } from "@/lib/pullRefresh";
 import { api, type PersonBrief } from "@/lib/api";
 import { roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
-import { colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
+import { colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 export default function JornadaScreen() {
   // `round_id` dice qué jornada mostrar: la pone un push (jornada publicada /
@@ -193,20 +193,33 @@ export default function JornadaScreen() {
               count={round.matches?.length ?? 0}
               style={styles.section}
             />
-            {(round.matches ?? []).map(
-              (m: { match_number: number; team_1: PersonBrief[]; team_2: PersonBrief[] }) => (
+            {(round.matches ?? []).map((m) => {
+              // El marcador llega en cuanto el club lo captura (el push «Tus resultados»
+              // abre aquí). Sin él, la tarjeta sigue siendo el «quién contra quién».
+              const score = m.score ?? null;
+              const mine = m.team_1?.some((p) => isMe(p?.name)) ? 1 : m.team_2?.some((p) => isMe(p?.name)) ? 2 : null;
+              const result = score && mine ? outcome(score, mine) : null;
+              return (
                 <GlassCard key={m.match_number} style={{ marginBottom: spacing.md, gap: spacing.sm }}>
-                  <Label>Partido {m.match_number}</Label>
-                  <TeamRow players={m.team_1} isMe={isMe} />
+                  <View style={styles.matchHead}>
+                    <Label>Partido {m.match_number}</Label>
+                    {result && (
+                      <Chip
+                        label={result === "win" ? "Ganaste" : result === "loss" ? "Perdiste" : "Empate"}
+                        color={result === "win" ? colors.primary : colors.textMuted}
+                      />
+                    )}
+                  </View>
+                  <TeamRow players={m.team_1} isMe={isMe} games={score?.team1} won={!!score && score.team1 > score.team2} />
                   <View style={styles.vsRow}>
                     <View style={styles.vsLine} />
                     <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.vsText}>VS</Text>
                     <View style={styles.vsLine} />
                   </View>
-                  <TeamRow players={m.team_2} isMe={isMe} />
+                  <TeamRow players={m.team_2} isMe={isMe} games={score?.team2} won={!!score && score.team2 > score.team1} />
                 </GlassCard>
-              )
-            )}
+              );
+            })}
 
             {/* La bitácora es de DESPUÉS de jugar: antes de la hora de la jornada solo
                 alargaba la pantalla con una pregunta que todavía no tiene respuesta. */}
@@ -220,7 +233,24 @@ export default function JornadaScreen() {
 
 /** Fila de un equipo de dobles: par de avatares + nombres (uno por línea, sin muro
  * de texto). El jugador actual se resalta con aro lima y etiqueta "Tú". */
-function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n?: string | null) => boolean }) {
+/** Cómo le fue a mi lado (1 o 2) con ese marcador. */
+function outcome(score: { team1: number; team2: number }, side: 1 | 2): "win" | "loss" | "draw" {
+  const [mine, theirs] = side === 1 ? [score.team1, score.team2] : [score.team2, score.team1];
+  return mine > theirs ? "win" : mine < theirs ? "loss" : "draw";
+}
+
+function TeamRow({
+  players,
+  isMe,
+  games,
+  won,
+}: {
+  players: PersonBrief[];
+  isMe: (n?: string | null) => boolean;
+  /** Games de este equipo, si el partido ya tiene marcador. */
+  games?: number;
+  won?: boolean;
+}) {
   const list = players ?? [];
   return (
     <View style={styles.teamRow}>
@@ -247,6 +277,15 @@ function TeamRow({ players, isMe }: { players: PersonBrief[]; isMe: (n?: string 
           </View>
         ))}
       </View>
+      {games != null && (
+        <Text
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
+          style={[styles.games, won && styles.gamesWon]}
+          accessibilityLabel={`${games} games${won ? ", ganaron" : ""}`}
+        >
+          {games}
+        </Text>
+      )}
     </View>
   );
 }
@@ -399,4 +438,14 @@ const styles = StyleSheet.create({
   vsRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   vsLine: { flex: 1, height: 1, backgroundColor: colors.glassBorder },
   vsText: { color: colors.textFaint, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  matchHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  games: {
+    minWidth: 28,
+    textAlign: "right",
+    color: colors.textMuted,
+    fontFamily: fonts.display,
+    fontSize: 26,
+    fontVariant: ["tabular-nums"],
+  },
+  gamesWon: { color: colors.primary },
 });
