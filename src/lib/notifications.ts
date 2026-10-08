@@ -37,7 +37,7 @@ function id(value: string | undefined): string | undefined {
 /**
  * A dónde lleva cada tipo de push. `null` = informativa, no navega.
  *
- * Los tipos son los seis que emite hoy el backend (messaging/services/push.py). Un tipo
+ * Los tipos son los que emite hoy el backend (messaging/services/push.py). Un tipo
  * desconocido —una versión vieja de la app recibiendo un push nuevo— tampoco navega.
  */
 export function routeFor(data: PushData | undefined | null): PushRoute | null {
@@ -81,6 +81,14 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
     case "feedback_access":
       return { pathname: "/privacidad" };
 
+    // Avisos al staff (modo club, 2026-10). «No voy» e impugnación → la hoja de ESA
+    // jornada, donde se cubre el lugar o se ve el partido. Reserva → el «Hoy» de ese club.
+    case "staff_unavailable":
+    case "staff_dispute":
+      return roundId ? { pathname: "/club/round/[id]", params: { id: roundId } } : clubHome(data.org_id);
+    case "staff_reservation":
+      return clubHome(data.org_id);
+
     // Cumpleaños: va dirigido al staff del club y esta app es del jugador. No hay
     // pantalla a la que llevar, así que no movemos al usuario de donde esté.
     case "player_birthday":
@@ -89,6 +97,12 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
     default:
       return null;
   }
+}
+
+/** El «Hoy en tu club» de ese club (con varios clubes, el del aviso). */
+function clubHome(orgId: string | undefined): PushRoute {
+  const org = id(orgId);
+  return { pathname: "/club", params: org ? { org } : undefined };
 }
 
 /** Destino pendiente cuando el push llegó sin sesión iniciada (se replayea tras el login). */
@@ -156,6 +170,18 @@ export function enterAppAfterLogin() {
   // Fuera de las pestañas (p. ej. `/disputes`) sí son dos rutas distintas: la segunda
   // diverge por nombre y apila la pantalla correcta, con vuelta atrás a la app.
   if (route) navigate(route);
+}
+
+/**
+ * Entra al modo club tras el login (staff sin ficha de jugador), directo al aviso del
+ * club si lo hubo. Un destino de jugador (pestañas) no aplica: no tiene pestañas.
+ */
+export function enterClubAfterLogin() {
+  const route = consumePendingRoute();
+  const club = route && route.pathname.startsWith("/club") ? route : null;
+  router.replace(club?.pathname === "/club" ? { pathname: "/club", params: club.params } : "/club");
+  // La hoja de una jornada se apila sobre el «Hoy»: la vuelta atrás regresa ahí.
+  if (club && club.pathname !== "/club") navigate(club);
 }
 
 /**

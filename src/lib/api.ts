@@ -813,6 +813,22 @@ export const api = {
       token,
       body: { push_token: pushToken },
     }),
+  /**
+   * El teléfono de la PERSONA (modo club, 2026-10): el registro de v2 exige ficha de
+   * jugador, así que el dueño que no juega no recibía avisos del club.
+   */
+  registerAccountDevice: (token: string, pushToken: string, platform: string) =>
+    request<{ id: number; registered: boolean }>("/api/v3/me/devices/", {
+      method: "POST",
+      token,
+      body: { push_token: pushToken, platform },
+    }),
+  unregisterAccountDevice: (token: string, pushToken: string) =>
+    request<{ registered: boolean; deleted: boolean }>("/api/v3/me/devices/", {
+      method: "DELETE",
+      token,
+      body: { push_token: pushToken },
+    }),
 
   /**
    * El jugador edita su propio perfil (ticket #26): contacto, dirección, nacimiento y

@@ -12,8 +12,8 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -39,6 +39,7 @@ import { api, type ClubToday, type PayMethod } from "@/lib/api";
 import { money, roundShort } from "@/lib/format";
 import { usePullRefresh } from "@/lib/pullRefresh";
 import { HOME_ROUTE } from "@/lib/routes";
+import { registerAccountDevice } from "@/lib/push";
 import { endSession } from "@/lib/session";
 import { isClubOnly, toAuthUser, useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
@@ -51,9 +52,21 @@ const ROLE: Record<string, string> = { owner: "Dueño", admin: "Supervisor", vie
 export default function ClubScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { token, user } = useAuth();
   const memberships = user?.memberships ?? [];
-  const [orgId, setOrgId] = useState<number | null>(memberships[0]?.organization_id ?? null);
+  // El club elegido vive en la RUTA (`?org=`): así un aviso de otro club abre ese club
+  // aunque la pantalla ya estuviera montada con el primero (regla de las pestañas).
+  const { org } = useLocalSearchParams<{ org?: string }>();
+  const pedido = Number(org);
+  const orgId =
+    memberships.find((m) => m.organization_id === pedido)?.organization_id ??
+    memberships[0]?.organization_id ??
+    null;
+  // El teléfono, con la cuenta: los avisos del club (no voy, impugnaciones, reservas)
+  // llegan aunque esta persona no tenga ficha de jugador.
+  useEffect(() => {
+    if (token) void registerAccountDevice(token);
+  }, [token]);
   const today = useClubToday(orgId);
   const pull = usePullRefresh(today.refetch);
   const data = today.data;
@@ -123,7 +136,7 @@ export default function ClubScreen() {
                 key={m.organization_id}
                 label={m.organization_name}
                 selected={m.organization_id === orgId}
-                onPress={() => setOrgId(m.organization_id)}
+                onPress={() => router.setParams({ org: String(m.organization_id) })}
               />
             ))}
           </ScrollView>

@@ -59,6 +59,20 @@ export async function registerDevice(authToken: string): Promise<void> {
 }
 
 /**
+ * Registra el teléfono con la CUENTA (modo club): así le llegan al dueño o supervisor los
+ * avisos del club —«No voy», impugnaciones, reservas— aunque no tenga ficha de jugador.
+ */
+export async function registerAccountDevice(authToken: string): Promise<void> {
+  try {
+    const pushToken = await getExpoPushToken();
+    if (!pushToken) return;
+    await api.registerAccountDevice(authToken, pushToken, Platform.OS);
+  } catch {
+    // Igual que el de jugador: nunca rompe la pantalla.
+  }
+}
+
+/**
  * Suelta el dispositivo al cerrar sesión. Best-effort, nunca lanza.
  *
  * Sin esto, un teléfono prestado sigue recibiendo los push del jugador anterior: el
@@ -72,7 +86,12 @@ export async function unregisterDevice(authToken: string | null): Promise<void> 
     if (status !== "granted") return;
     const pushToken = await getExpoPushToken();
     if (!pushToken) return;
-    await api.unregisterDevice(authToken, pushToken);
+    // Los dos registros: el de jugador (v2) y el de la cuenta (modo club). Cada uno
+    // suelta solo lo de esta persona; el que no aplica responde «nada que borrar».
+    await Promise.all([
+      api.unregisterDevice(authToken, pushToken).catch(() => {}),
+      api.unregisterAccountDevice(authToken, pushToken).catch(() => {}),
+    ]);
   })();
   // Con techo: `fetch` en React Native no trae timeout, y esto está en el camino del
   // botón de cerrar sesión. Si la red no contesta, se cierra igual — el token se

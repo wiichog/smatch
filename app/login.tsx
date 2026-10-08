@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useState } from "react";
 import {
@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
-import { enterAppAfterLogin } from "@/lib/notifications";
+import { enterAppAfterLogin, enterClubAfterLogin } from "@/lib/notifications";
 import { toAuthUser, useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
@@ -26,7 +26,6 @@ const LOGIN_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260618_174853_aac61aa2-0f3f-4cf1-bc78-7f657dd11164.mp4";
 
 export default function Login() {
-  const router = useRouter();
   // `expired`: la raíz trajo aquí a alguien cuya sesión ya no sirve (401): se le dice
   // por qué volvió a esta pantalla en vez de dejarlo adivinar.
   const { expired } = useLocalSearchParams<{ expired?: string }>();
@@ -66,7 +65,7 @@ export default function Login() {
       // Staff sin jugador (dueño, administrador): entra al modo club (fase 3, 2026-10).
       // Antes se le cerraba la puerta con «esta app es para jugadores».
       if (!user.players_count) {
-        router.replace("/club");
+        enterClubAfterLogin();
         return;
       }
       // Si la app la abrió un push sin sesión, entra directo a su destino. Una sola
