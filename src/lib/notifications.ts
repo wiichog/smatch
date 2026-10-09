@@ -88,12 +88,16 @@ export function routeFor(data: PushData | undefined | null): PushRoute | null {
       return { pathname: "/privacidad" };
 
     // Avisos al staff (modo club, 2026-10). «No voy» e impugnación → la hoja de ESA
-    // jornada, donde se cubre el lugar o se ve el partido. Reserva → el «Hoy» de ese club.
+    // jornada, donde se cubre el lugar o se ve el partido. Reserva → la Agenda del club en
+    // el día de la reserva (suele ser otro día; el «Hoy» solo enseña las de hoy).
     case "staff_unavailable":
     case "staff_dispute":
       return roundId ? { pathname: "/club/round/[id]", params: { id: roundId } } : clubHome(data.org_id);
-    case "staff_reservation":
-      return clubHome(data.org_id);
+    case "staff_reservation": {
+      const org = id(data.org_id);
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date ?? "") ? data.date! : undefined;
+      return { pathname: "/club/agenda", params: { ...(org ? { org } : {}), ...(date ? { date } : {}) } };
+    }
 
     // Mensaje del club (2026-10): la notificación corta el texto; la pantalla lo
     // muestra completo con lo que trae el push (no hay buzón en el servidor).

@@ -7,84 +7,50 @@
  * jornadas en borrador sin publicar, impugnaciones abiertas y las reservas de hoy.
  *
  * Y lo resuelve ahí mismo (si es dueño o supervisor; el Lector solo mira): cubrir un
- * lugar con suplente, capturar marcadores y publicar un borrador desde la hoja de la
- * jornada (`club/round/[id]`), y cobrar una reserva. Todo va a las mismas rutas del panel.
+ * lugar con suplente, capturar marcadores, publicar un borrador y cerrar la jornada desde
+ * la hoja (`club/round/[id]`), y cobrar una reserva. Todo va a las mismas rutas del panel.
+ *
+ * Es la primera pestaña del modo club (2026-10); el panel, la sesión y «¿También
+ * juegas?» se fueron a «Más».
  */
 import { Ionicons } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
+import { ClubSwitcher } from "@/components/ClubSwitcher";
 import { GlassCard } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
-import { Button, Label, Muted, Pill, SelectChip } from "@/components/ui";
-import { useToast } from "@/components/Toast";
-import { useClubActions, useClubToday } from "@/hooks";
-import { api, type ClubToday, type PayMethod } from "@/lib/api";
-import { money, roundShort } from "@/lib/format";
+import { Button, Label, Muted, Pill } from "@/components/ui";
+import { useClubToday } from "@/hooks";
+import { type ClubToday } from "@/lib/api";
+import { useChargeReservation } from "@/lib/clubCharge";
+import { ROLE_LABEL, useClubOrg } from "@/lib/clubOrg";
+import { money, playedDay, roundShort } from "@/lib/format";
 import { usePullRefresh } from "@/lib/pullRefresh";
 import { HOME_ROUTE } from "@/lib/routes";
-import { registerAccountDevice } from "@/lib/push";
-import { endSession } from "@/lib/session";
-import { isClubOnly, toAuthUser, useAuth } from "@/store/auth";
+import { isClubOnly, useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
-
-const PANEL_URL = "https://www.smatchapp.mx/portal/admin";
-
-// Como los nombra el panel: el «admin» del club es el Supervisor (ticket #26).
-const ROLE: Record<string, string> = { owner: "Dueño", admin: "Supervisor", viewer: "Lector" };
 
 export default function ClubScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { token, user } = useAuth();
-  const memberships = user?.memberships ?? [];
-  // El club elegido vive en la RUTA (`?org=`): así un aviso de otro club abre ese club
-  // aunque la pantalla ya estuviera montada con el primero (regla de las pestañas).
+  const user = useAuth((s) => s.user);
+  const { orgId: elegido, memberships, setOrgId } = useClubOrg();
+  // Un aviso de OTRO club trae `?org=`: se abre ese club aunque la pestaña ya estuviera
+  // montada con el primero, y queda elegido para Agenda y Jugadores.
   const { org } = useLocalSearchParams<{ org?: string }>();
-  const pedido = Number(org);
-  const orgId =
-    memberships.find((m) => m.organization_id === pedido)?.organization_id ??
-    memberships[0]?.organization_id ??
-    null;
-  // El teléfono, con la cuenta: los avisos del club (no voy, impugnaciones, reservas)
-  // llegan aunque esta persona no tenga ficha de jugador.
+  const pedido = memberships.find((m) => m.organization_id === Number(org))?.organization_id ?? null;
   useEffect(() => {
-    if (token) void registerAccountDevice(token);
-  }, [token]);
+    if (pedido != null) setOrgId(pedido);
+  }, [pedido, setOrgId]);
+  const orgId = pedido ?? elegido;
   const today = useClubToday(orgId);
   const pull = usePullRefresh(today.refetch);
   const data = today.data;
   const role = memberships.find((m) => m.organization_id === orgId)?.role;
-
-  function askSignOut() {
-    Alert.alert("¿Cerrar sesión?", "Tendrás que volver a entrar con tu correo y contraseña.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Cerrar sesión",
-        style: "destructive",
-        onPress: async () => {
-          await endSession(queryClient);
-          router.replace("/login");
-        },
-      },
-    ]);
-  }
 
   if (memberships.length === 0) {
     return (
@@ -102,7 +68,7 @@ export default function ClubScreen() {
   return (
     <Screen
       title="Hoy en tu club"
-      subtitle={[data?.club.name, role ? ROLE[role] ?? role : null].filter(Boolean).join(" · ")}
+      subtitle={[data?.club.name, role ? ROLE_LABEL[role] ?? role : null].filter(Boolean).join(" · ")}
       right={
         !isClubOnly(user) ? (
           <Pressable
@@ -129,18 +95,15 @@ export default function ClubScreen() {
           <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
-        {memberships.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chips}>
-            {memberships.map((m) => (
-              <SelectChip
-                key={m.organization_id}
-                label={m.organization_name}
-                selected={m.organization_id === orgId}
-                onPress={() => router.setParams({ org: String(m.organization_id) })}
-              />
-            ))}
-          </ScrollView>
-        )}
+        <ClubSwitcher
+          selected={orgId}
+          // Sin `?org=` en la ruta: si no, el aviso que trajo el parámetro seguiría
+          // mandando sobre lo que la persona acaba de elegir.
+          onSelect={(id) => {
+            setOrgId(id);
+            if (org) router.setParams({ org: "" });
+          }}
+        />
 
         {today.isLoading ? (
           <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
@@ -150,109 +113,14 @@ export default function ClubScreen() {
           <Today data={data} />
         ) : null}
 
-        {data && orgId != null && data.can_edit && !data.club.is_demo && !playsIn(user, orgId) && (
-          <JoinAsPlayerCard key={orgId} orgId={orgId} clubName={data.club.name} />
-        )}
-
-        <View style={styles.footer}>
-          <Button
-            title="Abrir el panel completo"
-            variant="glass"
-            icon={<Ionicons name="open-outline" size={16} color={colors.text} />}
-            onPress={() => Linking.openURL(PANEL_URL).catch(() => {})}
-          />
-          <Muted style={{ textAlign: "center" }}>
-            Ligas, jugadores, torneos y caja se administran en el panel.
-          </Muted>
-          <Button title="Cerrar sesión" variant="glass" onPress={askSignOut} />
-        </View>
       </ScrollView>
     </Screen>
   );
 }
 
-/** ¿Ya juega en este club? Sin `player_orgs` (sesión de antes de 2026-10) no se sabe en
- *  cuál juega, así que solo se ofrece a quien no juega en ninguno. */
-function playsIn(user: ReturnType<typeof useAuth.getState>["user"], orgId: number): boolean {
-  if (user?.player_orgs) return user.player_orgs.includes(orgId);
-  return (user?.players_count ?? 0) > 0;
-}
-
-/**
- * El dueño o supervisor que también juega (2026-10): se suma como jugador de su club con
- * esta misma cuenta, sin invitación ni otra contraseña. Antes no había forma: su correo
- * ya era una cuenta y la invitación de jugador se negaba.
- */
-function JoinAsPlayerCard({ orgId, clubName }: { orgId: number; clubName: string }) {
-  const toast = useToast();
-  const queryClient = useQueryClient();
-  const { token, user, setSession } = useAuth();
-  const looksLikeName = !!user?.name && !user.name.includes("@");
-  const [name, setName] = useState(looksLikeName ? user!.name : "");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function join() {
-    if (!token) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.joinAsPlayer(token, orgId, name.trim());
-      // La sesión se relee para que la app sepa que ya juega (y le ofrezca el modo jugador).
-      const me = await api.me(token);
-      setSession(token, toAuthUser(me.user));
-      void queryClient.invalidateQueries();
-      toast.show(`¡Listo! Ya eres jugador de ${clubName}. Cambia de modo con «Jugador».`);
-    } catch (e) {
-      setError((e as Error).message || "No se pudo. Intenta de nuevo.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <GlassCard style={styles.joinCard}>
-      <View style={styles.rowIcon}>
-        <Ionicons name="tennisball" size={18} color={colors.primary} />
-        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle}>
-          ¿También juegas en {clubName}?
-        </Text>
-      </View>
-      <Muted>
-        Súmate como jugador con esta misma cuenta: verás tu jornada, tu liga y tus números, sin otra cuenta ni
-        invitación.
-      </Muted>
-      <TextInput
-        maxFontSizeMultiplier={MAX_FONT_SCALE}
-        style={styles.input}
-        value={name}
-        onChangeText={(v) => {
-          setName(v);
-          setError(null);
-        }}
-        placeholder="Tu nombre como jugador"
-        placeholderTextColor={colors.textFaint}
-        autoCapitalize="words"
-        returnKeyType="go"
-        onSubmitEditing={() => name.trim().length >= 3 && !busy && void join()}
-        accessibilityLabel="Tu nombre como jugador"
-      />
-      {!!error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
-      <Button title="Sumarme como jugador" onPress={join} loading={busy} disabled={name.trim().length < 3} />
-    </GlassCard>
-  );
-}
-
-const PAY_METHODS: { method: PayMethod; label: string }[] = [
-  { method: "cash", label: "Efectivo" },
-  { method: "card", label: "Tarjeta" },
-  { method: "transfer", label: "Transferencia" },
-];
-
 function Today({ data }: { data: ClubToday }) {
   const router = useRouter();
-  const toast = useToast();
-  const { pay } = useClubActions();
+  const charge = useChargeReservation(data.club.id);
   const canEdit = !!data.can_edit;
   const porCubrir = data.rounds.reduce((n, r) => n + r.needs_substitute.length, 0);
   let index = 0;
@@ -262,30 +130,16 @@ function Today({ data }: { data: ClubToday }) {
   const cover = (roundId: number, slotId: number) =>
     router.push({ pathname: "/club/suplente", params: { round: roundId, slot: slotId } });
 
-  function askPay(r: ClubToday["reservations"][number]) {
-    // Con un pago parcial se cobra solo lo que falta: el total ya no es lo que entra.
-    const partial = r.payment_status === "partial";
-    Alert.alert(
-      partial ? "Cobrar lo que falta" : `Cobrar ${money(r.total)}`,
-      `${r.court} · ${r.start_time}–${r.end_time}${r.customer ? ` · ${r.customer}` : ""}. ${
-        partial ? `Ya hay un pago parcial de los ${money(r.total)}; se cobra el resto` : "Se cobra completa"
-      } y entra a la caja si está abierta.`,
-      [
-        ...PAY_METHODS.map((m) => ({
-          text: m.label,
-          onPress: () =>
-            pay.mutate(
-              { orgId: data.club.id, reservationId: r.id, method: m.method },
-              {
-                onSuccess: () => toast.show(`Cobrada en ${m.label.toLowerCase()}.`),
-                onError: (e) => toast.show((e as Error).message || "No se pudo cobrar.", "error"),
-              }
-            ),
-        })),
-        { text: "Cancelar", style: "cancel" as const },
-      ]
-    );
-  }
+  const askPay = (r: ClubToday["reservations"][number]) =>
+    charge.ask({
+      id: r.id,
+      court: r.court,
+      start: r.start_time,
+      end: r.end_time,
+      customer: r.customer,
+      total: r.total,
+      payment_status: r.payment_status,
+    });
 
   return (
     <>
@@ -317,7 +171,13 @@ function Today({ data }: { data: ClubToday }) {
                       {roundShort(r.scheduled_at) || "Sin fecha"}
                     </Text>
                   </View>
-                  {r.in_play && <Pill label="En juego" tone="success" />}
+                  {r.pending_tiebreaks ? (
+                    <Pill label="Falta la ruleta" tone="danger" />
+                  ) : r.ready_to_close ? (
+                    <Pill label="Lista para cerrar" tone="primary" />
+                  ) : (
+                    r.in_play && <Pill label="En juego" tone="success" />
+                  )}
                   <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
                 </Pressable>
                 <Muted>{roundFacts(r)}</Muted>
@@ -362,6 +222,46 @@ function Today({ data }: { data: ClubToday }) {
                 )}
               </GlassCard>
             ))
+          )}
+
+          {(data.to_close?.length ?? 0) > 0 && (
+            <GlassCard style={styles.card}>
+              <View style={styles.rowIcon}>
+                <Ionicons name="flag-outline" size={18} color={colors.primary} />
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.rowTitle}>
+                  {data.to_close!.length === 1 ? "1 jornada por cerrar" : `${data.to_close!.length} jornadas por cerrar`}
+                </Text>
+              </View>
+              <Muted>Ya se jugaron. Al cerrarlas se aplican los ascensos y a cada jugador le llega su resultado.</Muted>
+              {data.to_close!.map((t) => (
+                <Pressable
+                  key={t.round_id}
+                  onPress={() => openRound(t.round_id)}
+                  style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.league}, jornada ${t.number}, por cerrar. Abrir`}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} numberOfLines={1} style={styles.linkText}>
+                      {t.league} · Jornada {t.number}
+                    </Text>
+                    <Muted>
+                      {[
+                        playedDay(t.scheduled_at),
+                        t.pending_tiebreaks
+                          ? "falta la ruleta de un empate"
+                          : t.scores.captured < t.scores.total
+                            ? `${t.scores.total - t.scores.captured} marcadores por capturar`
+                            : "marcadores completos",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </Muted>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                </Pressable>
+              ))}
+            </GlassCard>
           )}
 
           {data.draft_rounds.length > 0 && (
@@ -452,7 +352,7 @@ function Today({ data }: { data: ClubToday }) {
                         onPress={() => askPay(r)}
                         style={styles.payBtn}
                         hitSlop={6}
-                        disabled={pay.isPending}
+                        disabled={charge.busy}
                         accessibilityRole="button"
                         accessibilityLabel={`Cobrar ${money(r.total)} de ${r.court} a las ${r.start_time}`}
                       >
@@ -528,9 +428,8 @@ function Summary({ value, label, hint, tone, width }: SummaryItem & { width: `${
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 60, gap: spacing.sm },
-  chipsScroll: { marginHorizontal: -spacing.lg },
-  chips: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+  // Abajo deja libre la barra de pestañas flotante.
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 140, gap: spacing.sm },
   modeBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -599,18 +498,5 @@ const styles = StyleSheet.create({
   hairline: { height: 1, backgroundColor: colors.glassBorder, marginVertical: spacing.xs },
   resRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   resTime: { width: 48, color: colors.primary, fontSize: 15, fontFamily: fonts.displaySemi },
-  footer: { marginTop: spacing.xl, gap: spacing.sm },
-  joinCard: { marginTop: spacing.lg, gap: spacing.sm },
-  input: {
-    minHeight: 46,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    backgroundColor: colors.glassStrong,
-    color: colors.text,
-    paddingHorizontal: spacing.md,
-    fontSize: 15,
-  },
-  error: { color: colors.danger, fontSize: 13 },
   demo: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
 });

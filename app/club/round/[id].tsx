@@ -3,13 +3,27 @@
  *
  * Pistas con sus cuatro jugadores —quién dijo «No voy» y quién juega de suplente— y sus
  * partidos con el marcador. Desde aquí el dueño o supervisor cubre un lugar, captura un
- * marcador o publica el borrador; el Lector la ve igual pero sin botones (`can_edit`).
- * Las acciones van a las mismas rutas del panel, con sus reglas: una pista con marcador
- * ya no cambia de alineación y solo una jornada publicada acepta marcadores.
+ * marcador, publica el borrador o cierra la jornada (2026-10, con la ruleta si hay
+ * empate); el Lector la ve igual pero sin botones (`can_edit`). Las acciones van a las
+ * mismas rutas del panel, con sus reglas: una pista con marcador ya no cambia de
+ * alineación y solo una jornada publicada acepta marcadores. Ya cerrada, cada jugador
+ * lleva la flecha de si subió o bajó, y un marcador con foto la enseña.
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { GlassCard } from "@/components/Glass";
@@ -36,6 +50,7 @@ export default function ClubRoundScreen() {
   const data = sheet.data;
   const rnd = data?.round;
 
+  const [photo, setPhoto] = useState<string | null>(null);
   const total = data?.courts.reduce((n, c) => n + c.matches.length, 0) ?? 0;
   const captured = data?.courts.reduce((n, c) => n + c.matches.filter((m) => m.score).length, 0) ?? 0;
   const players = data?.courts.reduce((n, c) => n + c.players.length, 0) ?? 0;
@@ -60,6 +75,8 @@ export default function ClubRoundScreen() {
   }
 
   const editable = !!data?.can_edit;
+  const pendingTies = data?.pending_tiebreaks ?? 0;
+  const openClose = () => rnd && router.push({ pathname: "/club/cierre", params: { round: rnd.id } });
 
   return (
     <Screen
@@ -103,7 +120,22 @@ export default function ClubRoundScreen() {
                     Jornada cerrada
                   </Text>
                 </View>
-                <Muted>Los marcadores y los movimientos ya quedaron.</Muted>
+                <Muted>Los marcadores y los movimientos ya quedaron. Junto a cada quien, si subió o bajó.</Muted>
+                <Button title="Ver resultados" variant="glass" onPress={openClose} />
+              </GlassCard>
+            ) : pendingTies > 0 ? (
+              <GlassCard strong style={styles.banner}>
+                <View style={styles.rowIcon}>
+                  <Ionicons name="shuffle" size={18} color={colors.warning} />
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.bannerTitle}>
+                    Falta la ruleta
+                  </Text>
+                </View>
+                <Muted>
+                  {pendingTies === 1 ? "Hay un empate" : `Hay ${pendingTies} empates`} para decidir quién sube o baja. Al
+                  tirarla se termina de cerrar la jornada.
+                </Muted>
+                {editable && <Button title="Tirar la ruleta" onPress={openClose} />}
               </GlassCard>
             ) : (
               <GlassCard strong style={styles.banner}>
@@ -118,6 +150,9 @@ export default function ClubRoundScreen() {
                   <View style={{ flex: Math.max(total - captured, 0) }} />
                 </View>
                 {editable && captured < total && <Muted>Toca un partido para capturar su marcador.</Muted>}
+                {editable && captured === total && total > 0 && (
+                  <Button title="Cerrar jornada" onPress={openClose} />
+                )}
               </GlassCard>
             )}
 
@@ -129,15 +164,37 @@ export default function ClubRoundScreen() {
                 canCapture={editable && rnd.accepts_results}
                 onCover={(slotId) => router.push({ pathname: "/club/suplente", params: { round: rnd.id, slot: slotId } })}
                 onCapture={(m) => router.push({ pathname: "/club/marcador", params: { round: rnd.id, match: m.id } })}
+                onPhoto={setPhoto}
               />
             ))}
             {!editable && <Muted style={{ textAlign: "center" }}>Tu acceso en este club es de solo lectura.</Muted>}
           </>
         ) : null}
       </ScrollView>
+      <PhotoViewer uri={photo} onClose={() => setPhoto(null)} />
     </Screen>
   );
 }
+
+/** La foto del marcador físico a pantalla completa; se cierra con un toque. */
+function PhotoViewer({ uri, onClose }: { uri: string | null; onClose: () => void }) {
+  return (
+    <Modal visible={!!uri} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.viewer} onPress={onClose} accessibilityLabel="Cerrar la foto">
+        {!!uri && <Image source={{ uri }} style={styles.viewerImg} resizeMode="contain" accessibilityLabel="Foto del marcador" />}
+        <View style={styles.viewerClose}>
+          <Ionicons name="close" size={26} color={colors.text} />
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const MOVE = {
+  up: { icon: "arrow-up" as const, color: colors.primary, label: "Sube" },
+  down: { icon: "arrow-down" as const, color: colors.warning, label: "Baja" },
+  stay: { icon: "remove" as const, color: colors.ink400, label: "Se queda" },
+};
 
 function CourtCard({
   court,
@@ -145,12 +202,14 @@ function CourtCard({
   canCapture,
   onCover,
   onCapture,
+  onPhoto,
 }: {
   court: Court;
   canCover: boolean;
   canCapture: boolean;
   onCover: (slotId: number) => void;
   onCapture: (m: SheetMatch) => void;
+  onPhoto: (uri: string) => void;
 }) {
   const where = [
     court.physical_court_number ? `Cancha ${court.physical_court_number}` : null,
@@ -182,6 +241,18 @@ function CourtCard({
                 <Muted numberOfLines={1}>{p.substitute_for ? `Suplente · cubre a ${p.substitute_for}` : "Suplente"}</Muted>
               )}
             </View>
+            {p.movement && !p.declined && (
+              <View
+                style={styles.move}
+                accessible
+                accessibilityLabel={`${MOVE[p.movement.direction].label} a la pista ${p.movement.to_court_number}`}
+              >
+                <Ionicons name={MOVE[p.movement.direction].icon} size={14} color={MOVE[p.movement.direction].color} />
+                <Text maxFontSizeMultiplier={TIGHT_FONT_SCALE} style={[styles.moveText, { color: MOVE[p.movement.direction].color }]}>
+                  P{p.movement.to_court_number}
+                </Text>
+              </View>
+            )}
             {p.declined &&
               (canCover ? (
                 <Pressable
@@ -208,14 +279,19 @@ function CourtCard({
 
       {court.matches.length > 0 && <View style={styles.hairline} />}
       {court.matches.map((m) => (
-        <MatchRow key={m.id} match={m} onPress={canCapture ? () => onCapture(m) : undefined} />
+        <MatchRow
+          key={m.id}
+          match={m}
+          onPress={canCapture ? () => onCapture(m) : undefined}
+          onPhoto={m.score?.photo_url ? () => onPhoto(m.score!.photo_url!) : undefined}
+        />
       ))}
     </GlassCard>
   );
 }
 
 /** Marcador como tablero: cada pareja en su renglón con sus games a la derecha. */
-function MatchRow({ match, onPress }: { match: SheetMatch; onPress?: () => void }) {
+function MatchRow({ match, onPress, onPhoto }: { match: SheetMatch; onPress?: () => void; onPhoto?: () => void }) {
   const s = match.score;
   const won1 = s ? s.team1_games > s.team2_games : false;
   const label = s
@@ -242,6 +318,11 @@ function MatchRow({ match, onPress }: { match: SheetMatch; onPress?: () => void 
         )}
         {s?.is_auto && <Muted>Automático: dos suplentes contra dos titulares.</Muted>}
       </View>
+      {onPhoto && (
+        <Pressable onPress={onPhoto} hitSlop={8} accessibilityRole="button" accessibilityLabel="Ver la foto del marcador">
+          <Ionicons name="camera-outline" size={20} color={colors.highlight} />
+        </Pressable>
+      )}
       {onPress && (
         <Ionicons name={s ? "create-outline" : "add-circle"} size={20} color={s ? colors.textFaint : colors.primary} />
       )}
@@ -298,4 +379,9 @@ const styles = StyleSheet.create({
   games: { width: 18, textAlign: "right", color: colors.textMuted, fontSize: 16, fontFamily: fonts.displaySemi },
   gamesWon: { color: colors.text },
   dispute: { color: colors.warning, fontSize: 12, fontWeight: "700" },
+  move: { flexDirection: "row", alignItems: "center", gap: 2 },
+  moveText: { fontSize: 12, fontWeight: "800" },
+  viewer: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  viewerImg: { width: "100%", height: "80%" },
+  viewerClose: { position: "absolute", top: 60, right: 24 },
 });

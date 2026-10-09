@@ -79,6 +79,41 @@ async function request<T>(
   return data as T;
 }
 
+/**
+ * Manda un formulario con archivos: foto de perfil, de la bitácora, del marcador y la
+ * captura de un reporte.
+ *
+ * Por `XMLHttpRequest` y NO por `fetch`: desde Expo SDK 56 el `fetch` global es el de
+ * Expo (`expo/fetch`), que no entiende las partes `{ uri, name, type }` del FormData de
+ * React Native («Unsupported FormDataPart implementation»), así que TODA subida de foto
+ * fallaba con «No pudimos conectar» (2026-10). El XHR de React Native sí las entiende
+ * —lee el archivo del disco en nativo— y Expo no lo reemplaza. No se le pone
+ * Content-Type: el XHR arma el `multipart/form-data` con su frontera.
+ */
+function sendForm<T>(path: string, method: string, token: string, fd: FormData): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, `${BASE_URL}${path}`);
+    xhr.setRequestHeader("Authorization", `Token ${token}`);
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.timeout = 60000;
+    xhr.onload = () => {
+      let data: any = {};
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+      } catch {
+        data = {};
+      }
+      if (xhr.status === 401) onUnauthorized?.();
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
+      else reject(new ApiError(data?.message || data?.error || data?.detail || "Error", xhr.status));
+    };
+    xhr.onerror = () => reject(new ApiError(OFFLINE_MESSAGE, 0));
+    xhr.ontimeout = () => reject(new ApiError(OFFLINE_MESSAGE, 0));
+    xhr.send(fd);
+  });
+}
+
 // --- Tipos del jugador (api/v2) ---
 /** Persona en un payload móvil: nombre + avatar (URL de foto o null → iniciales). */
 /** Cancha que el club renta desde la app (`GET /api/v2/rentals/courts/`). */
@@ -226,8 +261,11 @@ export interface PlayerStats {
 /** «Hoy en tu club» (`GET /api/v3/orgs/<id>/today/`): el modo club de la app. */
 export interface ClubToday {
   club: { id: number; name: string; logo_url: string | null; is_demo: boolean };
-  /** Qué secciones le enseña el panel a esta membresía. */
-  sections: { leagues: boolean; rentals: boolean };
+  /**
+   * Qué secciones le enseña el panel a esta membresía. `calendar` y `players` (2026-10)
+   * deciden las pestañas Agenda y Jugadores; faltan en un backend anterior.
+   */
+  sections: { leagues: boolean; rentals: boolean; calendar?: boolean; players?: boolean };
   /** Admin u owner: enseña los botones (cubrir, capturar, cobrar, publicar). El Lector solo mira. */
   can_edit?: boolean;
   rounds: {
@@ -246,6 +284,19 @@ export interface ClubToday {
     /** Lugares por cubrir con suplente. */
     needs_substitute: { slot_id: number; court_number: number; position: string; player: string }[];
     scores: { captured: number; total: number };
+    /** Todos los marcadores están: ya se puede cerrar (2026-10). */
+    ready_to_close?: boolean;
+    /** Empates que esperan la ruleta para terminar de cerrar. */
+    pending_tiebreaks?: number;
+  }[];
+  /** Jornadas que ya se jugaron y siguen sin cerrar (o esperan la ruleta). 2026-10. */
+  to_close?: {
+    round_id: number;
+    league: string;
+    number: number;
+    scheduled_at: string | null;
+    scores: { captured: number; total: number };
+    pending_tiebreaks: number;
   }[];
   draft_rounds: { round_id: number; league_id: number; league: string; number: number }[];
   open_disputes: {
@@ -285,6 +336,8 @@ export interface RoundSheet {
     accepts_results: boolean;
   };
   can_edit: boolean;
+  /** Empates que esperan la ruleta para terminar de cerrar (2026-10). */
+  pending_tiebreaks?: number;
   courts: {
     court_number: number;
     physical_court_number: number | null;
@@ -302,6 +355,8 @@ export interface RoundSheet {
       substitute_for: string | null;
       /** Dijo «No voy». */
       declined: boolean;
+      /** Jornada cerrada: subió, bajó o se quedó, y a qué pista va. */
+      movement?: { direction: "up" | "down" | "stay"; to_court_number: number } | null;
     }[];
     matches: SheetMatch[];
   }[];
@@ -312,8 +367,144 @@ export interface SheetMatch {
   match_number: number;
   team1: string[];
   team2: string[];
-  score: { team1_games: number; team2_games: number; is_auto: boolean } | null;
+  score: {
+    team1_games: number;
+    team2_games: number;
+    is_auto: boolean;
+    /** Foto del marcador físico, si se subió. */
+    photo_url?: string | null;
+  } | null;
   dispute: { id: number; raised_by: string; proposed: string } | null;
+}
+
+/** Un empate que se decide con la ruleta (respuesta de cerrar y de girar). */
+export interface PendingTiebreak {
+  draw_id: number;
+  court_number: number;
+  kind: "up" | "down";
+  candidates: { player: number; player_name: string }[];
+}
+
+/** Un movimiento al cerrar: quién sube, baja o se queda. */
+export interface RoundMovement {
+  id: number;
+  player: number;
+  player_name: string;
+  direction: "up" | "down" | "stay";
+  from_court_number: number;
+  to_court_number: number;
+  round_points: number;
+  reason: string;
+}
+
+/** Cerrar o leer el cierre (`rounds/<id>/close/` y `rounds/<id>/movements/`). */
+export interface CloseState {
+  status: "closed" | "pending_tiebreaks" | "published" | "draft";
+  pending_tiebreaks: PendingTiebreak[];
+  movements: RoundMovement[];
+}
+
+/** Girar la ruleta de un empate (`rounds/<id>/tiebreak/<draw>/spin/`). */
+export interface SpinResult {
+  draw: {
+    id: number;
+    court_number: number;
+    kind: "up" | "down";
+    winner: number | null;
+    winner_name: string | null;
+    loser: number | null;
+    loser_name: string | null;
+  };
+  finalized: boolean;
+  pending_tiebreaks: PendingTiebreak[];
+  movements?: RoundMovement[];
+}
+
+/** Un renglón de la agenda del club (`GET /api/v3/orgs/<id>/agenda/`). */
+export interface AgendaItem {
+  kind: "reservation" | "league" | "lesson" | "tournament" | "maintenance" | "blocked" | string;
+  id: number | null;
+  start: string;
+  end: string;
+  court: string | null;
+  title: string;
+  subtitle: string;
+  status: string;
+  /** Reservas, si la membresía ve rentas. */
+  total?: string;
+  payment_status?: string;
+  can_pay?: boolean;
+  /** Jornadas: abre su hoja si la membresía ve ligas. */
+  round_id?: number;
+  can_open?: boolean;
+}
+
+export interface ClubAgenda {
+  club: { id: number; name: string };
+  date: string;
+  today: string;
+  can_edit: boolean;
+  sections: { rentals: boolean; leagues: boolean };
+  days: { date: string; count: number }[];
+  items: AgendaItem[];
+}
+
+/** Jugador del club en la lista del modo club. */
+export interface ClubPlayerRow {
+  id: number;
+  name: string;
+  avatar_url: string | null;
+  category: string | null;
+  branch: string | null;
+  phone: string | null;
+  has_app: boolean;
+  is_active: boolean;
+  leagues: { league: string; court: number | null }[];
+}
+
+/** Ficha de un jugador para la cancha (`GET /api/v3/orgs/<id>/club-players/<pk>/`). */
+export interface ClubPlayerCard {
+  id: number;
+  name: string;
+  avatar_url: string | null;
+  category: string | null;
+  branch: string | null;
+  is_active: boolean;
+  has_app: boolean;
+  birthday: string | null;
+  contact: { phone: string | null; email: string | null; call_url: string | null; whatsapp_url: string | null };
+  leagues: { league_id: number; league: string; points: number; court: number | null; place: number; active: boolean }[];
+  next_round: {
+    round_id: number;
+    league: string;
+    number: number;
+    scheduled_at: string | null;
+    court_number: number;
+    position: string;
+    availability: "available" | "unavailable" | "pending";
+    is_substitute: boolean;
+    substitute_for: string | null;
+  } | null;
+  recent: {
+    round_id: number;
+    league: string;
+    number: number;
+    direction: "up" | "down" | "stay";
+    from_court: number;
+    to_court: number;
+    points: number;
+    closed_at: string | null;
+  }[];
+  reservations: { upcoming: number; unpaid: number; last_date: string | null } | null;
+}
+
+/** Qué avisos quiere recibir la persona (`/api/v3/me/push-preferences/`). */
+export interface PushCategory {
+  key: string;
+  group: "player" | "staff";
+  label: string;
+  description: string;
+  enabled: boolean;
 }
 
 /** Con quién cubrir un lugar (`GET /api/v3/rounds/<id>/substitute-candidates/`). */
@@ -691,11 +882,47 @@ export const api = {
       token,
       body: { slot_id: slotId, substitute_id: substituteId },
     }),
-  captureScore: (token: string, matchId: number, team1: number, team2: number) =>
-    request<unknown>(`/api/v3/matches/${matchId}/result/`, {
-      method: "POST",
+  /** Con foto del marcador va multipart (`score_photo`); sin ella, JSON. */
+  captureScore: async (
+    token: string,
+    matchId: number,
+    team1: number,
+    team2: number,
+    photo?: { uri: string; name?: string | null; type?: string | null } | null
+  ): Promise<unknown> => {
+    const path = `/api/v3/matches/${matchId}/result/`;
+    if (!photo) {
+      return request<unknown>(path, { method: "POST", token, body: { team1_games: team1, team2_games: team2 } });
+    }
+    const fd = new FormData();
+    fd.append("team1_games", String(team1));
+    fd.append("team2_games", String(team2));
+    const part = resolvePhotoPart(photo.uri, { name: photo.name, type: photo.type });
+    fd.append("score_photo", { uri: photo.uri, name: part.name, type: part.type } as any);
+    return sendForm<unknown>(path, "POST", token, fd);
+  },
+  closeRound: (token: string, roundId: number) =>
+    request<CloseState>(`/api/v3/rounds/${roundId}/close/`, { method: "POST", token }),
+  roundMovements: (token: string, roundId: number) =>
+    request<CloseState>(`/api/v3/rounds/${roundId}/movements/`, { token }),
+  spinTiebreak: (token: string, roundId: number, drawId: number) =>
+    request<SpinResult>(`/api/v3/rounds/${roundId}/tiebreak/${drawId}/spin/`, { method: "POST", token }),
+  clubAgenda: (token: string, orgId: number, date?: string) =>
+    request<ClubAgenda>(`/api/v3/orgs/${orgId}/agenda/${date ? `?date=${date}` : ""}`, { token }),
+  clubPlayers: (token: string, orgId: number, q: string, scope: "active" | "all" = "active") =>
+    request<{ count: number; next_offset: number | null; players: ClubPlayerRow[] }>(
+      `/api/v3/orgs/${orgId}/club-players/?q=${encodeURIComponent(q)}&scope=${scope}`,
+      { token }
+    ),
+  clubPlayerCard: (token: string, orgId: number, playerId: number) =>
+    request<ClubPlayerCard>(`/api/v3/orgs/${orgId}/club-players/${playerId}/`, { token }),
+  pushPreferences: (token: string) =>
+    request<{ categories: PushCategory[] }>("/api/v3/me/push-preferences/", { token }),
+  setPushPreference: (token: string, key: string, enabled: boolean) =>
+    request<{ categories: PushCategory[] }>("/api/v3/me/push-preferences/", {
+      method: "PATCH",
       token,
-      body: { team1_games: team1, team2_games: team2 },
+      body: { key, enabled },
     }),
   publishRound: (token: string, roundId: number) =>
     request<unknown>(`/api/v3/rounds/${roundId}/publish/`, { method: "POST", token }),
@@ -802,14 +1029,7 @@ export const api = {
       const name = photoUri.split("/").pop() || "foto.jpg";
       const ext = name.split(".").pop()?.toLowerCase() || "jpg";
       fd.append("photo", { uri: photoUri, name, type: `image/${ext === "jpg" ? "jpeg" : ext}` } as any);
-      const res = await fetchOrExplain(`${BASE_URL}${path}`, {
-        method: "POST",
-        headers: { Authorization: `Token ${token}` },
-        body: fd,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new ApiError(data?.message || data?.error || data?.detail || "Error", res.status);
-      return data;
+      return sendForm<any>(path, "POST", token, fd);
     }
     return request<any>(path, { method: "POST", token, body: fields });
   },
@@ -868,16 +1088,7 @@ export const api = {
       // name/type robustos: usa el fileName/mimeType del asset; si faltan, jpg/jpeg.
       const part = resolvePhotoPart(photoUri, photoMeta);
       fd.append("photo", { uri: photoUri, name: part.name, type: part.type } as any);
-      const res = await fetchOrExplain(`${BASE_URL}/api/v2/me/profile/`, {
-        method: "PATCH",
-        headers: { Authorization: `Token ${token}` },
-        body: fd,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new ApiError(data?.message || data?.error || data?.detail || "Error", res.status);
-      }
-      return data;
+      return sendForm<any>("/api/v2/me/profile/", "PATCH", token, fd);
     }
     return request<any>("/api/v2/me/profile/", { method: "PATCH", token, body: fields });
   },
@@ -905,16 +1116,7 @@ export const api = {
         name,
         type: `image/${ext === "jpg" ? "jpeg" : ext}`,
       } as any);
-      const res = await fetchOrExplain(`${BASE_URL}/api/v2/me/report/`, {
-        method: "POST",
-        headers: { Authorization: `Token ${token}` },
-        body: fd,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new ApiError(data?.message || data?.error || data?.detail || "Error", res.status);
-      }
-      return data as { id: number; status: string };
+      return sendForm<{ id: number; status: string }>("/api/v2/me/report/", "POST", token, fd);
     }
     return request<{ id: number; status: string }>("/api/v2/me/report/", {
       method: "POST",

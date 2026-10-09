@@ -5,11 +5,16 @@
  * empates, y un 7 solo junto a un 6 o un 5. Se validan antes de enviar para que nadie
  * descubra la regla con un error. Al guardar ofrece el siguiente partido sin marcador:
  * en la cancha se capturan uno tras otro.
+ *
+ * Foto del marcador (2026-10, opcional): la del tablero físico como evidencia, la misma
+ * que el panel ya aceptaba. Se elige de las fotos del teléfono: la app no pide permiso de
+ * cámara (`cameraPermission: false` en app.json), así que se toma con la cámara y se elige.
  */
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type RefObject, useRef, useState } from "react";
-import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { GlassCard } from "@/components/Glass";
 import { LoadError } from "@/components/LoadError";
@@ -104,7 +109,25 @@ function CaptureForm({ roundId, located, data }: { roundId: number; located: Loc
   const [second, setSecond] = useState(match.score ? String(match.score.team2_games) : "");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<{ a: number; b: number } | null>(null);
+  const [photo, setPhoto] = useState<{ uri: string; name?: string | null; type?: string | null } | null>(null);
   const secondRef = useRef<TextInput>(null);
+  const savedPhoto = match.score?.photo_url ?? null;
+
+  async function pickPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      toast.show("Sin acceso a tus fotos: actívalo en Ajustes para adjuntar el marcador.", "error");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+    });
+    if (!res.canceled && res.assets[0]) {
+      const a = res.assets[0];
+      setPhoto({ uri: a.uri, name: a.fileName, type: a.mimeType });
+    }
+  }
 
   async function save() {
     if (first === "" || second === "") return;
@@ -118,7 +141,7 @@ function CaptureForm({ roundId, located, data }: { roundId: number; located: Loc
     }
     setError(null);
     try {
-      await capture.mutateAsync({ matchId: match.id, team1: a, team2: b });
+      await capture.mutateAsync({ matchId: match.id, team1: a, team2: b, photo });
       toast.show("Marcador guardado.");
       setSaved({ a, b });
     } catch (e) {
@@ -180,6 +203,26 @@ function CaptureForm({ roundId, located, data }: { roundId: number; located: Loc
           }}
         />
       </GlassCard>
+      <Pressable
+        onPress={pickPhoto}
+        style={({ pressed }) => [styles.photoRow, pressed && { opacity: 0.6 }]}
+        accessibilityRole="button"
+        accessibilityLabel={photo || savedPhoto ? "Cambiar la foto del marcador" : "Agregar una foto del marcador"}
+      >
+        {photo || savedPhoto ? (
+          <Image source={{ uri: photo?.uri ?? savedPhoto! }} style={styles.thumb} />
+        ) : (
+          <View style={styles.thumbEmpty}>
+            <Ionicons name="camera-outline" size={22} color={colors.textMuted} />
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.photoTitle}>
+            {photo ? "Foto lista para guardar" : savedPhoto ? "Ya tiene foto" : "Foto del marcador (opcional)"}
+          </Text>
+          <Muted>{photo || savedPhoto ? "Toca para cambiarla." : "Del tablero, como evidencia si alguien impugna."}</Muted>
+        </View>
+      </Pressable>
       {match.dispute && (
         <Muted>
           Impugnación abierta: {match.dispute.raised_by || "un jugador"} propone {match.dispute.proposed}. La deciden los
@@ -257,6 +300,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
   },
   error: { color: colors.danger, fontSize: 13 },
+  photoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  thumb: { width: 56, height: 56, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder },
+  thumbEmpty: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.glassBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoTitle: { color: colors.text, fontSize: 15, fontWeight: "700" },
   doneCard: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl },
   doneScore: { color: colors.text, fontSize: 40, fontFamily: fonts.display },
 });

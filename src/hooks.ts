@@ -2,7 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   api,
+  type ClubAgenda,
+  type ClubPlayerCard,
+  type ClubPlayerRow,
   type ClubToday,
+  type PushCategory,
   type DashboardData,
   type FeedbackAccessRequest,
   type HistoryRow,
@@ -190,6 +194,8 @@ export function useClubActions() {
     void qc.invalidateQueries({ queryKey: ["club-today"] });
     void qc.invalidateQueries({ queryKey: ["round-sheet"] });
     void qc.invalidateQueries({ queryKey: ["substitute-candidates"] });
+    void qc.invalidateQueries({ queryKey: ["club-agenda"] });
+    void qc.invalidateQueries({ queryKey: ["club-player"] });
   };
   const substitute = useMutation({
     mutationFn: (v: { roundId: number; slotId: number; substituteId: number }) =>
@@ -197,8 +203,21 @@ export function useClubActions() {
     onSuccess: refresh,
   });
   const capture = useMutation({
-    mutationFn: (v: { matchId: number; team1: number; team2: number }) =>
-      api.captureScore(token!, v.matchId, v.team1, v.team2),
+    mutationFn: (v: {
+      matchId: number;
+      team1: number;
+      team2: number;
+      photo?: { uri: string; name?: string | null; type?: string | null } | null;
+    }) => api.captureScore(token!, v.matchId, v.team1, v.team2, v.photo),
+    onSuccess: refresh,
+  });
+  // Cerrar y girar la ruleta (2026-10): mismas rutas del panel.
+  const close = useMutation({
+    mutationFn: (roundId: number) => api.closeRound(token!, roundId),
+    onSuccess: refresh,
+  });
+  const spin = useMutation({
+    mutationFn: (v: { roundId: number; drawId: number }) => api.spinTiebreak(token!, v.roundId, v.drawId),
     onSuccess: refresh,
   });
   const publish = useMutation({
@@ -210,7 +229,66 @@ export function useClubActions() {
       api.payReservation(token!, v.orgId, v.reservationId, v.method),
     onSuccess: refresh,
   });
-  return { substitute, capture, publish, pay };
+  return { substitute, capture, publish, pay, close, spin };
+}
+
+/** La agenda del club, un día a la vez (modo club, 2026-10). */
+export function useClubAgenda(orgId: number | null, date: string | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<ClubAgenda>({
+    queryKey: ["club-agenda", orgId, date],
+    queryFn: () => api.clubAgenda(token!, orgId!, date ?? undefined),
+    enabled: !!token && orgId != null,
+    // Al cambiar de día se queda el anterior a la vista mientras llega el nuevo.
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Jugadores del club, buscando por nombre o teléfono. */
+export function useClubPlayers(orgId: number | null, q: string, scope: "active" | "all") {
+  const token = useAuth((s) => s.token);
+  return useQuery<{ count: number; next_offset: number | null; players: ClubPlayerRow[] }>({
+    queryKey: ["club-players", orgId, q, scope],
+    queryFn: () => api.clubPlayers(token!, orgId!, q, scope),
+    enabled: !!token && orgId != null,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useClubPlayerCard(orgId: number | null, playerId: number | null) {
+  const token = useAuth((s) => s.token);
+  return useQuery<ClubPlayerCard>({
+    queryKey: ["club-player", orgId, playerId],
+    queryFn: () => api.clubPlayerCard(token!, orgId!, playerId!),
+    enabled: !!token && orgId != null && playerId != null,
+  });
+}
+
+/** Qué avisos quiere recibir la persona; el cambio se ve al instante y se guarda. */
+export function usePushPreferences() {
+  const token = useAuth((s) => s.token);
+  const qc = useQueryClient();
+  const list = useQuery<{ categories: PushCategory[] }>({
+    queryKey: ["push-preferences"],
+    queryFn: () => api.pushPreferences(token!),
+    enabled: !!token,
+  });
+  const toggle = useMutation({
+    mutationFn: (v: { key: string; enabled: boolean }) => api.setPushPreference(token!, v.key, v.enabled),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ["push-preferences"] });
+      const prev = qc.getQueryData<{ categories: PushCategory[] }>(["push-preferences"]);
+      qc.setQueryData<{ categories: PushCategory[] }>(["push-preferences"], (old) =>
+        old ? { categories: old.categories.map((c) => (c.key === v.key ? { ...c, enabled: v.enabled } : c)) } : old
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["push-preferences"], ctx.prev);
+    },
+    onSuccess: (data) => qc.setQueryData(["push-preferences"], data),
+  });
+  return { list, toggle };
 }
 
 /** Clubes que pidieron leer tu bitácora, y decidir. */

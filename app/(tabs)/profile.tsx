@@ -231,6 +231,22 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </GlassPressable>
 
+          {/* Qué avisos te llegan al celular (2026-10). */}
+          <GlassPressable
+            onPress={() => router.push("/avisos")}
+            style={styles.reportRow}
+            accessibilityLabel="Avisos"
+          >
+            <View style={styles.reportIcon}>
+              <Ionicons name="notifications" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.reportTitle}>Avisos</Text>
+              <Muted>Elige qué te llega al celular: resultados, torneos, mensajes del club.</Muted>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </GlassPressable>
+
           {/* Reportar un problema */}
           <GlassPressable onPress={bugReport.open} style={styles.reportRow} accessibilityLabel="Reportar un problema">
             <View style={styles.reportIcon}>

@@ -63,7 +63,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Smatch abre tus fotos para tu foto de perfil, para la foto de la bitácora de la jornada y para adjuntar una captura al reportar un problema.",
+          "photosPermission": "Smatch abre tus fotos para tu foto de perfil, la foto de la bitácora de la jornada, la foto del marcador de un partido y para adjuntar una captura al reportar un problema.",
           "cameraPermission": false,
           "microphonePermission": false
         }
