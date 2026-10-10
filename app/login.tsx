@@ -35,6 +35,10 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // «¿Olvidaste tu contraseña?» (2026-10-09): el mismo formulario cambia a pedir el
+  // enlace. `sentTo` = a qué correo se pidió (el servidor no dice si existe la cuenta).
+  const [forgot, setForgot] = useState(false);
+  const [sentTo, setSentTo] = useState("");
 
   // Video de fondo en loop, silenciado y autoplay.
   const player = useVideoPlayer(LOGIN_VIDEO, (p) => {
@@ -78,6 +82,34 @@ export default function Login() {
     }
   }
 
+  async function onForgot() {
+    setError("");
+    const correo = email.trim();
+    if (!correo.includes("@")) {
+      setError("Escribe el correo con el que entras a Smatch.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.forgotPassword(correo);
+      setSentTo(correo);
+    } catch (e: any) {
+      setError(
+        e?.status === 429
+          ? "Demasiados intentos. Espera unos minutos y vuelve a probar."
+          : e?.message ?? "No pudimos mandar el enlace. Intenta de nuevo."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function backToLogin() {
+    setForgot(false);
+    setSentTo("");
+    setError("");
+  }
+
   return (
     <View style={styles.root}>
       <VideoView
@@ -110,6 +142,48 @@ export default function Login() {
             <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.tagline}>Tu liga de pádel, siempre en juego.</Text>
             <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.subtitle}>Consulta tu jornada, tu cancha y tu ranking.</Text>
 
+            {forgot ? (
+              <View style={styles.form}>
+                {sentTo ? (
+                  <View style={styles.helpBox}>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.sentTitle}>Revisa tu correo</Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpText}>
+                      Si hay una cuenta con {sentTo}, te mandamos un enlace para crear una contraseña nueva. Vence
+                      en una hora. Ábrelo, elige tu contraseña y vuelve aquí a entrar.
+                    </Text>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpSmall}>
+                      ¿No llega? Revisa spam. Si tu club te dio de alta con otro correo, pídele que te reenvíe la
+                      invitación.
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.notice}>
+                      Escribe tu correo y te mandamos un enlace para crear una contraseña nueva.
+                    </Text>
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                      style={styles.input}
+                      placeholder="Correo"
+                      placeholderTextColor={colors.textMuted}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="email-address"
+                      textContentType="username"
+                      value={email}
+                      onChangeText={setEmail}
+                      onSubmitEditing={onForgot}
+                      returnKeyType="send"
+                      accessibilityLabel="Correo"
+                    />
+                    {!!error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
+                    <Button title="Mandarme el enlace" onPress={onForgot} loading={loading} />
+                  </>
+                )}
+                <Pressable onPress={backToLogin} hitSlop={8} accessibilityRole="button">
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpLink}>Volver a iniciar sesión</Text>
+                </Pressable>
+              </View>
+            ) : (
             <View style={styles.form}>
               {expired === "1" && !error && (
                 <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.notice}>
@@ -135,22 +209,33 @@ export default function Login() {
               />
               {!!error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.error}>{error}</Text>}
               <Button title="Entrar" onPress={onLogin} loading={loading} />
-              {/* La cuenta del jugador la crea su CLUB con una invitación por correo, y
-                  esa misma invitación es como se recupera una contraseña olvidada. Sin
-                  esto, quien no tenía contraseña no sabía ni por dónde empezar. */}
-              <Pressable onPress={() => setHelpOpen((v) => !v)} hitSlop={8} accessibilityRole="button">
-                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpLink}>¿Primera vez o se te olvidó tu contraseña?</Text>
-              </Pressable>
+              <View style={styles.links}>
+                <Pressable
+                  onPress={() => {
+                    setError("");
+                    setHelpOpen(false);
+                    setForgot(true);
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                >
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpLink}>¿Olvidaste tu contraseña?</Text>
+                </Pressable>
+                {/* La cuenta del jugador la crea su CLUB con una invitación por correo. */}
+                <Pressable onPress={() => setHelpOpen((v) => !v)} hitSlop={8} accessibilityRole="button">
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpLink}>¿Primera vez?</Text>
+                </Pressable>
+              </View>
               {helpOpen && (
                 <View style={styles.helpBox}>
                   <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.helpText}>
-                    Tu club te manda una invitación por correo para crear tu contraseña. Si no te
-                    llegó, o si olvidaste tu contraseña, pídele a tu club que te la reenvíe: con
-                    ese enlace eliges una nueva.
+                    Tu club te manda una invitación por correo para crear tu contraseña. Si no te llegó, pídele a tu
+                    club que te la reenvíe.
                   </Text>
                 </View>
               )}
             </View>
+            )}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -193,4 +278,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   helpText: { color: colors.text, fontSize: 14, lineHeight: 20 },
+  helpSmall: { color: colors.textMuted, fontSize: 13, lineHeight: 18, marginTop: spacing.sm },
+  sentTitle: { color: colors.text, fontSize: 17, fontWeight: "800", marginBottom: spacing.xs },
+  links: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: spacing.xs },
 });

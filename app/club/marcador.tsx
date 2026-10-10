@@ -11,7 +11,6 @@
  * cámara (`cameraPermission: false` en app.json), así que se toma con la cámara y se elige.
  */
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type RefObject, useRef, useState } from "react";
 import { ActivityIndicator, Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -24,6 +23,7 @@ import { Button, Muted } from "@/components/ui";
 import { useClubActions, useRoundSheet } from "@/hooks";
 import type { RoundSheet, SheetMatch } from "@/lib/api";
 import { colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
+import { pickImage } from "@/lib/pickImage";
 
 const MAX_GAMES = 7;
 
@@ -114,19 +114,8 @@ function CaptureForm({ roundId, located, data }: { roundId: number; located: Loc
   const savedPhoto = match.score?.photo_url ?? null;
 
   async function pickPhoto() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      toast.show("Sin acceso a tus fotos: actívalo en Ajustes para adjuntar el marcador.", "error");
-      return;
-    }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.6,
-    });
-    if (!res.canceled && res.assets[0]) {
-      const a = res.assets[0];
-      setPhoto({ uri: a.uri, name: a.fileName, type: a.mimeType });
-    }
+    const asset = await pickImage({ title: "Foto del marcador" });
+    if (asset) setPhoto(asset);
   }
 
   async function save() {

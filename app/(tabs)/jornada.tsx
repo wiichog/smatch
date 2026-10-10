@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -31,6 +30,7 @@ import { api, type PersonBrief } from "@/lib/api";
 import { roundWhen } from "@/lib/format";
 import { useAuth } from "@/store/auth";
 import { colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
+import { pickImage } from "@/lib/pickImage";
 
 export default function JornadaScreen() {
   // `round_id` dice qué jornada mostrar: la pone un push (jornada publicada /
@@ -316,13 +316,8 @@ function FeedbackSection({ roundId, index }: { roundId: number; index: number })
   }, [token, roundId]);
 
   async function pick() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.6,
-    });
-    if (!res.canceled && res.assets[0]) setPhotoUri(res.assets[0].uri);
+    const asset = await pickImage({ title: "Foto de la jornada" });
+    if (asset) setPhotoUri(asset.uri);
   }
 
   async function save() {

@@ -5,7 +5,6 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -27,6 +26,7 @@ import { Button, Label, Muted } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
+import { pickImage } from "@/lib/pickImage";
 
 type Field = {
   key: string;
@@ -119,19 +119,11 @@ export default function ProfileEditScreen() {
   }, [token]);
 
   async function pickPhoto() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.6,
-      allowsEditing: true,
-      aspect: [1, 1],
-    });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
+    const asset = await pickImage({ square: true, title: "Tu foto de perfil" });
+    if (asset) {
       setPhotoUri(asset.uri);
       // Guarda fileName/mimeType del asset para armar un multipart robusto (ticket #33).
-      setPhotoMeta({ name: asset.fileName, type: asset.mimeType });
+      setPhotoMeta({ name: asset.name, type: asset.type });
     }
   }
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Smatch",
     "slug": "smatch",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "scheme": "smatch",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -30,7 +30,6 @@
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION",
         "com.google.android.gms.permission.AD_ID",
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW"
       ]
@@ -64,7 +63,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Smatch abre tus fotos para tu foto de perfil, la foto de la bitácora de la jornada, la foto del marcador de un partido y para adjuntar una captura al reportar un problema.",
-          "cameraPermission": false,
+          "cameraPermission": "Smatch usa la cámara para tomar tu foto de perfil, la foto de la bitácora de la jornada o la del marcador de un partido.",
           "microphonePermission": false
         }
       ]

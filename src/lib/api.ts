@@ -847,6 +847,9 @@ export const api = {
       body: { email, password, client: "app" },
     }),
   me: (token: string) => request<{ user: any }>("/api/v3/auth/me/", { token }),
+  /** «¿Olvidaste tu contraseña?»: responde lo mismo exista o no la cuenta; el enlace va al correo. */
+  forgotPassword: (email: string) =>
+    request<{ sent: boolean }>("/api/v3/auth/password/forgot/", { method: "POST", body: { email } }),
   logout: (token: string) =>
     request<void>("/api/v3/auth/logout/", { method: "POST", token, body: { client: "app" } }),
   /** El dueño o supervisor se suma como jugador de su propio club. */

@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -17,6 +16,7 @@ import { api } from "@/lib/api";
 import { endSession } from "@/lib/session";
 import { useAuth } from "@/store/auth";
 import { alpha, colors, MAX_FONT_SCALE, radius, spacing } from "@/theme";
+import { pickImage } from "@/lib/pickImage";
 
 /**
  * Páginas legales y de soporte, que viven en el web. Apple exige que la política de
@@ -64,22 +64,14 @@ export default function ProfileScreen() {
   // resto de campos. Reutiliza api.updateProfile + refresco (setSession + invalidate).
   async function changePhoto() {
     if (!token || uploading) return;
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.6,
-      allowsEditing: true,
-      aspect: [1, 1],
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
+    const asset = await pickImage({ square: true, title: "Tu foto de perfil" });
+    if (!asset) return;
     setPhotoError(null);
     setUploading(true);
     try {
       const updated = await api.updateProfile(token, {}, asset.uri, {
-        name: asset.fileName,
-        type: asset.mimeType,
+        name: asset.name,
+        type: asset.type,
       });
       if (user && updated?.avatar_url) {
         setSession(token, { ...user, avatar_url: updated.avatar_url });
