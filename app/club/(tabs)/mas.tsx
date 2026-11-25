@@ -15,6 +15,7 @@ import { ClubSwitcher } from "@/components/ClubSwitcher";
 import { GlassCard } from "@/components/Glass";
 import { Screen } from "@/components/Screen";
 import { useToast } from "@/components/Toast";
+import { useBugReport } from "@/components/BugReport";
 import { Button, Muted } from "@/components/ui";
 import { useClubToday } from "@/hooks";
 import { api } from "@/lib/api";
@@ -34,6 +35,7 @@ export default function ClubMoreScreen() {
   const user = useAuth((s) => s.user);
   const { orgId, membership } = useClubOrg();
   const data = useClubToday(orgId).data;
+  const bugReport = useBugReport();
 
   function askSignOut() {
     Alert.alert("¿Cerrar sesión?", "Tendrás que volver a entrar con tu correo y contraseña.", [
@@ -88,6 +90,14 @@ export default function ClubMoreScreen() {
             title="Abrir el panel completo"
             hint="Ligas, jugadores, torneos y caja se administran ahí."
             onPress={() => Linking.openURL(PANEL_URL).catch(() => {})}
+          />
+          {/* Ticket #113: el dueño no tenía cómo pedir ayuda desde el modo club. */}
+          <View style={styles.hairline} />
+          <Row
+            icon="help-buoy-outline"
+            title="Ayuda: reportar un problema"
+            hint="¿Algo falló o necesitas algo? Cuéntanos (o sacude el teléfono)."
+            onPress={bugReport.open}
           />
         </GlassCard>
 

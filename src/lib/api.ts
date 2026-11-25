@@ -1105,6 +1105,12 @@ export const api = {
     payload: object,
     imageUri?: string | null
   ): Promise<{ id: number; status: string }> => {
+    // Ticket #113: el modo club (payload con `organization`) reporta por la ruta v3 del
+    // staff — la v2 exige jugador vinculado y al dueño sin ficha le daba 403.
+    const path =
+      "organization" in payload && (payload as { organization?: unknown }).organization != null
+        ? "/api/v3/support/report/"
+        : "/api/v2/me/report/";
     if (imageUri) {
       const fd = new FormData();
       for (const [k, v] of Object.entries(payload)) {
@@ -1119,9 +1125,9 @@ export const api = {
         name,
         type: `image/${ext === "jpg" ? "jpeg" : ext}`,
       } as any);
-      return sendForm<{ id: number; status: string }>("/api/v2/me/report/", "POST", token, fd);
+      return sendForm<{ id: number; status: string }>(path, "POST", token, fd);
     }
-    return request<{ id: number; status: string }>("/api/v2/me/report/", {
+    return request<{ id: number; status: string }>(path, {
       method: "POST",
       token,
       body: payload,

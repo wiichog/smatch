@@ -37,7 +37,8 @@ import {
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { captureContext, enqueueReport, flushQueue } from "@/lib/report";
-import { useAuth } from "@/store/auth";
+import { useClubOrg } from "@/lib/clubOrg";
+import { isClubOnly, useAuth } from "@/store/auth";
 import { alpha, colors, fonts, MAX_FONT_SCALE, radius, spacing } from "@/theme";
 
 interface BugReportContextValue {
@@ -56,7 +57,12 @@ const SHAKE_COOLDOWN_MS = 1500;
 
 export function BugReportProvider({ children }: { children: ReactNode }) {
   const token = useAuth((s) => s.token);
+  const user = useAuth((s) => s.user);
   const pathname = usePathname();
+  const { orgId: clubOrgId } = useClubOrg();
+  // Ticket #113: en el modo club (o si la cuenta no juega) se reporta como staff del
+  // club elegido; la ruta del jugador exige ficha de jugador y al dueño le daba 403.
+  const asClub = (pathname.startsWith("/club") || isClubOnly(user)) && clubOrgId != null;
 
   const [visible, setVisible] = useState(false);
   const [description, setDescription] = useState("");
@@ -88,7 +94,7 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
     if (token) flushQueue(token);
   }, [token]);
 
-  // Shake-to-report: solo con sesión iniciada (el reporte exige jugador vinculado).
+  // Shake-to-report: solo con sesión iniciada (jugador, o staff en el modo club).
   const lastShake = useRef(0);
   useEffect(() => {
     if (!token) return;
@@ -118,7 +124,11 @@ export function BugReportProvider({ children }: { children: ReactNode }) {
     if (!token || !description.trim()) return;
     setSending(true);
     setError(null);
-    const payload = { ...captureContext(pathname), description: description.trim() };
+    const payload = {
+      ...captureContext(pathname),
+      description: description.trim(),
+      ...(asClub ? { organization: clubOrgId, surface: "mobile_app" as const } : {}),
+    };
     try {
       await api.reportBug(token, payload, imageUri);
       flushQueue(token); // aprovecha para vaciar pendientes

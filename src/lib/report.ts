@@ -27,6 +27,10 @@ export interface ReportPayload {
   screen?: string;
   stack_trace?: string;
   client_context?: Record<string, unknown>;
+  /** Modo club (ticket #113): el club desde el que reporta el staff. Con él, el envío
+   *  va a la ruta v3 del staff; se guarda en la cola para reintentar por la misma. */
+  organization?: number;
+  surface?: "mobile_app";
 }
 
 /** Metadata del dispositivo/app que se adjunta automáticamente. */
