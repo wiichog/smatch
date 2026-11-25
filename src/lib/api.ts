@@ -838,6 +838,33 @@ function resolvePhotoPart(
   return { name, type };
 }
 
+/**
+ * Sugerencia de clase (ticket #108): el jugador viene bajando de cancha (jugando, no por
+ * ausencia) y su club tiene clases y coaches. Endpoint nuevo: un backend anterior no lo
+ * tiene y responde 404, así que todo es opcional y la tarjeta simplemente no aparece.
+ * `whatsapp_url` lo arma el backend (con el 52 de México); `null` si el club no capturó
+ * teléfono.
+ */
+export type CoachingSlot = { date: string; start: string; end: string; whatsapp_url?: string | null };
+export type CoachingCoach = {
+  id: number;
+  full_name?: string | null;
+  specialty?: string | null;
+  whatsapp_url?: string | null;
+  slots?: CoachingSlot[] | null;
+};
+export type CoachingSuggestion = {
+  suggest: boolean;
+  league?: { id: number; name?: string | null; club?: string | null } | null;
+  rounds_down?: number | null;
+  weeks_down?: number | null;
+  from_court?: number | null;
+  current_court?: number | null;
+  since?: string | null;
+  coaches?: CoachingCoach[] | null;
+  contact?: { club?: string | null; phone?: string | null; whatsapp_url?: string | null } | null;
+};
+
 export const api = {
   // `client: "app"`: el backend da un token propio de este teléfono (2026-10), que al
   // cerrar sesión se borra sin sacar al panel ni a los otros teléfonos.
@@ -865,6 +892,8 @@ export const api = {
     request<FeedbackAccessRequest>(`/api/v2/me/feedback-access/${id}/`, { method: "POST", token, body: { decision } }),
   profile: (token: string) => request<any>("/api/v2/me/profile/", { token }),
   dashboard: (token: string) => request<DashboardData>("/api/v2/me/dashboard/", { token }),
+  coachingSuggestion: (token: string) =>
+    request<CoachingSuggestion>("/api/v2/me/coaching-suggestion/", { token }),
   rankings: (token: string) => request<{ rankings: Ranking[] }>("/api/v2/me/rankings/", { token }),
   leagueStandings: (token: string, leagueId: number) =>
     request<LeagueStandings>(`/api/v2/leagues/${leagueId}/standings/`, { token }),

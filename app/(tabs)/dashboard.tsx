@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { AvailabilityPicker } from "@/components/Availability";
 import { Avatar } from "@/components/Avatar";
+import { CoachingSuggestionCard } from "@/components/CoachingSuggestionCard";
 import { CourtBackdrop } from "@/components/CourtBackdrop";
 import { CoveredNotice } from "@/components/CoveredNotice";
 import { GlassCard, GlassPressable } from "@/components/Glass";
@@ -13,7 +14,14 @@ import { LoadError } from "@/components/LoadError";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Trend } from "@/components/Trend";
 import { Label, Muted } from "@/components/ui";
-import { useDashboard, useFeedbackAccess, useMyReservations, useMyTournaments, useNextRound } from "@/hooks";
+import {
+  useCoachingSuggestion,
+  useDashboard,
+  useFeedbackAccess,
+  useMyReservations,
+  useMyTournaments,
+  useNextRound,
+} from "@/hooks";
 import { usePullRefresh } from "@/lib/pullRefresh";
 import type { DashboardData, MyReservation } from "@/lib/api";
 import { capitalize, hhmm, money, monthShort, parseLocalDate, relativeDay, roundShort, roundWhen } from "@/lib/format";
@@ -29,7 +37,11 @@ export default function DashboardScreen() {
   const { data, isLoading, refetch, isError, error } = useDashboard();
   const nextRound = useNextRound();
   const reservations = useMyReservations();
-  const pull = usePullRefresh(() => Promise.all([refetch(), nextRound.refetch(), reservations.refetch()]));
+  // Ticket #108: si vienes bajando de cancha, una clase con un coach de tu club.
+  const coaching = useCoachingSuggestion();
+  const pull = usePullRefresh(() =>
+    Promise.all([refetch(), nextRound.refetch(), reservations.refetch(), coaching.refetch()])
+  );
   const round = nextRound.data?.next_round;
   const user = useAuth((s) => s.user);
   const firstName = user?.name?.split(" ")[0] ?? "";
@@ -234,6 +246,9 @@ export default function DashboardScreen() {
               </View>
             </GlassCard>
           )}
+
+          {/* Solo aparece si el backend la manda (`suggest`); si falla o no existe, nada. */}
+          {!loadFailed && <CoachingSuggestionCard data={coaching.data} style={{ marginTop: spacing.lg }} />}
 
           {loadFailed ? null : isLoading ? (
             <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />

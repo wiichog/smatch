@@ -6,6 +6,7 @@ import {
   type ClubPlayerCard,
   type ClubPlayerRow,
   type ClubToday,
+  type CoachingSuggestion,
   type PushCategory,
   type DashboardData,
   type FeedbackAccessRequest,
@@ -32,6 +33,20 @@ export function useDashboard() {
     queryKey: ["dashboard"],
     queryFn: () => api.dashboard(token!),
     enabled: !!token,
+  });
+}
+
+/**
+ * ¿Le sugerimos una clase? (ticket #108). Se recalcula poco: solo cambia al cerrar una
+ * jornada o al agendarse una clase, así que 5 min de caché bastan.
+ */
+export function useCoachingSuggestion() {
+  const token = useAuth((s) => s.token);
+  return useQuery<CoachingSuggestion>({
+    queryKey: ["coaching-suggestion"],
+    queryFn: () => api.coachingSuggestion(token!),
+    enabled: !!token,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
